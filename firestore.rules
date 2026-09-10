@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isCompanyOwner(companyId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == request.auth.uid;
+    }
+
+    // المستخدمون: كل شخص يقرأ/يكتب وثيقته فقط، والأدمن يقرأ الكل
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // الشركات: القراءة للجميع (روابط العملاء)، الإنشاء لصاحب الحساب، التعديل للمالك أو الأدمن
+    match /companies/{id} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isAdmin()
+        || (isCompanyOwner(id) && request.resource.data.status == resource.data.status); // المالك لا يغيّر حالة التفعيل بنفسه
+      allow delete: if isAdmin();
+    }
+
+    // الرحلات: القراءة للجميع، الكتابة لمالك الشركة أو الأدمن
+    match /trips/{id} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isCompanyOwner(resource.data.companyId)
+        || (isSignedIn() && isCompanyOwner(request.resource.data.companyId));
+    }
+
+    // الحجوزات: الإنشاء للجميع (العميل يحجز بدون حساب)، القراءة لمالك الشركة أو الأدمن أو للبحث برقم الواتساب
+    match /bookings/{id} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if isAdmin() || isCompanyOwner(resource.data.companyId);
+    }
+
+    // الموظفون: مالك الشركة فقط
+    match /employees/{id} {
+      allow read: if isAdmin() || isCompanyOwner(resource.data.companyId);
+      allow create: if isCompanyOwner(request.resource.data.companyId);
+      allow update, delete: if isAdmin() || isCompanyOwner(resource.data.companyId);
+    }
+  }
+}

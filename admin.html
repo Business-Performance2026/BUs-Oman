@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>رحلاتك — لوحة الإدارة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="phone">
+
+  <!-- دخول الأدمن -->
+  <section class="screen active" id="s-login">
+    <div class="appbar purple"><h1>🛡️ دخول الإدارة</h1></div>
+    <div class="wrap">
+      <div class="error" id="loginErr"></div>
+      <div class="field"><label>البريد الإلكتروني</label><input id="aEmail" type="email" dir="ltr" style="text-align:right" placeholder="admin@mail.com"></div>
+      <div class="field"><label>كلمة المرور</label><input id="aPass" type="password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" onclick="adminLogin()">دخول</button>
+      <p class="center" style="margin-top:14px"><button class="link" onclick="location.href='index.html'">← العودة للرئيسية</button></p>
+    </div>
+  </section>
+
+  <!-- لوحة الأدمن -->
+  <section class="screen" id="s-dash">
+    <div class="appbar purple"><h1>لوحة تحكم الأدمن</h1><button class="side" onclick="logout()">خروج ⎋</button></div>
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat"><div class="ic" style="background:#ece6f8">🏢</div><b id="stCo">0</b><span>عدد الشركات</span></div>
+        <div class="stat"><div class="ic" style="background:var(--teal-l)">🎫</div><b id="stBk">0</b><span>الحجوزات</span></div>
+        <div class="stat"><div class="ic" style="background:#dff3e9">🚌</div><b id="stTr">0</b><span>إجمالي الرحلات</span></div>
+        <div class="stat"><div class="ic" style="background:#f7ecd4">⏳</div><b id="stPd">0</b><span>بانتظار التفعيل</span></div>
+      </div>
+
+      <h2 class="sec">طلبات التفعيل <small onclick="loadAdmin()">↻ تحديث</small></h2>
+      <div id="pendingList"></div>
+
+      <h2 class="sec">جميع الشركات</h2>
+      <div id="companiesList"></div>
+    </div>
+    <nav class="bnav">
+      <button class="on" onclick="loadAdmin()"><span class="i">🏠</span>الرئيسية</button>
+      <button onclick="showOnly('active')"><span class="i">🏢</span>المفعّلة</button>
+      <button onclick="showOnly('pending')"><span class="i">⏳</span>المعلّقة</button>
+      <button onclick="showOnly('suspended')"><span class="i">⛔</span>الموقوفة</button>
+    </nav>
+  </section>
+
+  <!-- تفاصيل شركة -->
+  <section class="screen" id="s-co">
+    <div class="appbar purple"><button class="back" onclick="show('s-dash')">→</button><h1>تفاصيل الشركة</h1></div>
+    <div class="wrap" id="coDetail"></div>
+  </section>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/common.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

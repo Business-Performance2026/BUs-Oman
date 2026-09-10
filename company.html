@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>رحلاتك — بوابة الشركات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="phone">
+
+  <!-- تسجيل الدخول -->
+  <section class="screen active" id="s-login">
+    <div class="appbar"><h1>تسجيل الدخول</h1></div>
+    <div class="wrap">
+      <p class="center muted" style="margin-bottom:18px">مرحباً بك مجدداً 👋</p>
+      <div class="error" id="loginErr"></div>
+      <div class="field"><label>البريد الإلكتروني</label><input id="lEmail" type="email" placeholder="example@mail.com" dir="ltr" style="text-align:right"></div>
+      <div class="field"><label>كلمة المرور</label><input id="lPass" type="password" placeholder="••••••••"></div>
+      <div style="text-align:left;margin-bottom:18px"><button class="link" onclick="show('s-forgot')">نسيت كلمة المرور؟</button></div>
+      <button class="btn btn-primary" onclick="doLogin()">تسجيل الدخول</button>
+      <p class="center muted" style="margin:16px 0">أو</p>
+      <button class="btn btn-ghost" onclick="show('s-register')">سجّل شركتك الآن</button>
+      <p class="center" style="margin-top:14px"><button class="link" onclick="location.href='index.html'">← العودة للرئيسية</button></p>
+    </div>
+  </section>
+
+  <!-- تسجيل شركة جديدة -->
+  <section class="screen" id="s-register">
+    <div class="appbar"><button class="back" onclick="show('s-login')">→</button><h1>تسجيل شركة نقل</h1></div>
+    <div class="wrap">
+      <p class="center muted" style="margin-bottom:18px">انضم لمنصة رحلاتك وابدأ باستقبال الحجوزات</p>
+      <div class="error" id="regErr"></div>
+      <div class="field"><label>اسم الشركة *</label><input id="rName" placeholder="مثال: شركة مسار النقل"></div>
+      <div class="field"><label>البريد الإلكتروني *</label><input id="rEmail" type="email" placeholder="info@company.com" dir="ltr" style="text-align:right"></div>
+      <div class="field"><label>رقم الواتساب *</label><input id="rWa" inputmode="tel" placeholder="05xxxxxxxx" dir="ltr" style="text-align:right"></div>
+      <div class="field"><label>كلمة المرور * (6 أحرف فأكثر)</label><input id="rPass" type="password" placeholder="••••••••"></div>
+      <div class="field"><label>وصف قصير (اختياري)</label><input id="rDesc" placeholder="نقل جامعي يومي في الرياض"></div>
+      <button class="btn btn-primary" id="regBtn" onclick="doRegister()">إنشاء الحساب</button>
+      <p class="center muted" style="margin-top:14px;font-size:12px">بالتسجيل فأنت توافق على الشروط والأحكام. يتطلب الحساب تفعيلاً من إدارة المنصة.</p>
+    </div>
+  </section>
+
+  <!-- نسيت كلمة المرور -->
+  <section class="screen" id="s-forgot">
+    <div class="appbar"><button class="back" onclick="show('s-login')">→</button><h1>استعادة كلمة المرور</h1></div>
+    <div class="wrap">
+      <div class="card center" style="padding:26px">
+        <div style="font-size:44px;margin-bottom:8px">🔑</div>
+        <p class="muted" style="margin-bottom:16px">أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين</p>
+        <div class="error" id="fgErr"></div>
+        <div class="field"><input id="fgEmail" type="email" placeholder="البريد الإلكتروني"></div>
+        <button class="btn btn-teal" onclick="doForgot()">إرسال الرابط</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- بانتظار التفعيل -->
+  <section class="screen" id="s-pending">
+    <div class="wrap" style="padding-top:100px">
+      <div class="card center" style="padding:30px">
+        <div style="font-size:52px;margin-bottom:10px">⏳</div>
+        <h2 style="font-weight:900">حسابك قيد المراجعة</h2>
+        <p class="muted" style="margin:10px 0 18px">تم استلام طلب تسجيل شركتك بنجاح.<br>سيتم تفعيل حسابك من إدارة المنصة قريبًا، وستتمكن بعدها من إضافة رحلاتك واستقبال الحجوزات.</p>
+        <button class="btn btn-ghost" onclick="logout()">تسجيل الخروج</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- لوحة الشركة -->
+  <section class="screen" id="s-dash">
+    <div class="appbar"><h1>لوحة الشركة</h1><button class="side" onclick="logout()">خروج ⎋</button></div>
+    <div class="wrap">
+      <div class="card" style="display:flex;gap:12px;align-items:center">
+        <div class="ava" style="width:52px;height:52px;border-radius:16px;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:24px">🚌</div>
+        <div style="flex:1;min-width:0"><h3 style="font-weight:900" id="dName"></h3><p class="muted" dir="ltr" style="text-align:right;font-size:12px" id="dEmail"></p></div>
+        <span class="badge b-green">اشتراك ساري</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="ic" style="background:var(--teal-l)">🗓️</div><b id="stTrips">0</b><span>إجمالي الرحلات</span></div>
+        <div class="stat"><div class="ic" style="background:#e8ecf8">🎫</div><b id="stBookings">0</b><span>إجمالي الحجوزات</span></div>
+        <div class="stat"><div class="ic" style="background:#dff3e9">👥</div><b id="stEmps">0</b><span>الموظفين</span></div>
+        <div class="stat"><div class="ic" style="background:#f7ecd4">💰</div><b id="stRevenue">0</b><span>الإيرادات (ر.س)</span></div>
+      </div>
+      <h2 class="sec">إجراءات سريعة</h2>
+      <div class="row">
+        <button class="btn btn-teal" onclick="openAddTrip()">＋ إضافة رحلة</button>
+        <button class="btn btn-ghost" onclick="openQR()">🔗 رابطي وباركودي</button>
+      </div>
+      <h2 class="sec">الرحلات القادمة</h2>
+      <div id="dashTrips"></div>
+    </div>
+    <nav class="bnav">
+      <button class="on" onclick="show('s-dash')"><span class="i">🏠</span>الرئيسية</button>
+      <button onclick="openCal()"><span class="i">🗓️</span>الجدول</button>
+      <button onclick="openBookings()"><span class="i">🎫</span>الحجوزات</button>
+      <button onclick="openEmps()"><span class="i">👥</span>الموظفون</button>
+    </nav>
+  </section>
+
+  <!-- جدول الرحلات -->
+  <section class="screen" id="s-cal">
+    <div class="appbar"><button class="back" onclick="show('s-dash')">→</button><h1>جدول الرحلات</h1></div>
+    <div class="wrap">
+      <div class="cal">
+        <div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:10px">
+          <button class="icon-btn" onclick="shiftMonth(1)">‹</button>
+          <span id="calTitle"></span>
+          <button class="icon-btn" onclick="shiftMonth(-1)">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <h2 class="sec" id="dayTitle">الرحلات</h2>
+      <div id="dayTrips"></div>
+      <button class="btn btn-primary" onclick="openAddTrip()">＋ إضافة رحلة جديدة</button>
+    </div>
+  </section>
+
+  <!-- إضافة رحلة -->
+  <section class="screen" id="s-addtrip">
+    <div class="appbar"><button class="back" onclick="openCal()">→</button><h1>إضافة رحلة</h1></div>
+    <div class="wrap">
+      <div class="error" id="tripErr"></div>
+      <div class="card">
+        <div class="field"><label>اسم الرحلة *</label><input id="tName" placeholder="مثال: جامعة السلطان قابوس"></div>
+        <div class="row">
+          <div class="field"><label>من *</label><input id="tFrom" placeholder="مسقط"></div>
+          <div class="field"><label>إلى *</label><input id="tTo" placeholder="الجامعة"></div>
+        </div>
+        <div class="field"><label>نوع الرحلة</label>
+          <select id="tType"><option>جامعات وكليات</option><option>حج وعمرة</option><option>رحلة يومية</option><option>أخرى</option></select>
+        </div>
+        <div class="row">
+          <div class="field"><label>التاريخ *</label><input id="tDate" type="date"></div>
+          <div class="field"><label>الوقت *</label><input id="tTime" type="time"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>عدد المقاعد *</label><input id="tSeats" type="number" min="1" placeholder="30"></div>
+          <div class="field"><label>السعر (ر.س) *</label><input id="tPrice" type="number" min="0" step="0.5" placeholder="25"></div>
+        </div>
+        <label style="font-size:13.5px;font-weight:700;color:var(--muted);display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <input type="checkbox" id="tRecurring"> رحلة متكررة يوميًا</label>
+      </div>
+      <button class="btn btn-primary" id="tripBtn" onclick="saveTrip()">حفظ الرحلة</button>
+    </div>
+  </section>
+
+  <!-- حجوزات الشركة -->
+  <section class="screen" id="s-bookings">
+    <div class="appbar"><button class="back" onclick="show('s-dash')">→</button><h1>الحجوزات الواردة</h1></div>
+    <div class="wrap"><div id="bookingsList"></div></div>
+  </section>
+
+  <!-- الموظفون -->
+  <section class="screen" id="s-emps">
+    <div class="appbar"><button class="back" onclick="show('s-dash')">→</button><h1>الموظفون</h1></div>
+    <div class="wrap">
+      <div class="card">
+        <h3 style="font-weight:900;margin-bottom:12px">إضافة موظف</h3>
+        <div class="error" id="empErr"></div>
+        <div class="field"><label>اسم الموظف *</label><input id="eName" placeholder="الاسم الكامل"></div>
+        <div class="field"><label>البريد الإلكتروني *</label><input id="eEmail" type="email" placeholder="emp@mail.com" dir="ltr" style="text-align:right"></div>
+        <div class="field"><label>كلمة المرور *</label><input id="ePass" type="password" placeholder="••••••••"></div>
+        <button class="btn btn-teal" id="empBtn" onclick="addEmployee()">＋ إضافة</button>
+      </div>
+      <h2 class="sec">الموظفون الحاليون</h2>
+      <div id="empsList"></div>
+    </div>
+  </section>
+
+  <!-- الرابط والباركود -->
+  <section class="screen" id="s-qr">
+    <div class="appbar"><button class="back" onclick="show('s-dash')">→</button><h1>رابط وباركود الشركة</h1></div>
+    <div class="wrap">
+      <div class="qr-box">
+        <div class="qr-holder" id="coQr"></div>
+        <h3 style="font-weight:900;margin-top:14px">رابط شركتك</h3>
+        <div class="card" style="background:#f4f7f9;box-shadow:none;display:flex;align-items:center;gap:8px;margin:12px 0">
+          <span dir="ltr" id="coLink" style="flex:1;font-size:13px;font-weight:700;color:var(--teal);text-align:left;word-break:break-all"></span>
+          <button class="icon-btn" onclick="copyLink()">📋</button>
+        </div>
+        <div class="row">
+          <button class="btn btn-teal" onclick="shareLink()">مشاركة الرابط</button>
+          <button class="btn btn-ghost" onclick="window.print()">🖨️ طباعة</button>
+        </div>
+      </div>
+      <p class="muted center" style="font-size:12.5px;margin-top:12px">اطبع الباركود والصقه على الحافلات، وضع الرابط في حسابات التواصل الاجتماعي</p>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/common.js"></script>
+<script src="js/company.js"></script>
+</body>
+</html>

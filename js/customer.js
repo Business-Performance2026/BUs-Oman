@@ -25,6 +25,15 @@ async function init(){
     qs('coCr').textContent = company.crNumber ? ('سجل تجاري: ' + company.crNumber) : '';
     if(company.logoUrl) qs('coLogoC').innerHTML = `<img src="${company.logoUrl}" style="width:100%;height:100%;object-fit:cover">`;
     qs('coSub').textContent = company.desc || 'حجوزات النقل عبر منصة رحلاتك';
+    // أزرار التواصل مع الشركة
+    const ct = [];
+    if(company.whatsapp) ct.push(`<a class="chip" href="${waLink(company.whatsapp)}" target="_blank" style="text-decoration:none">💬 واتساب</a>`);
+    if(company.contactCall) ct.push(`<a class="chip" href="tel:${company.contactCall}" target="_blank" style="text-decoration:none">📞 اتصال</a>`);
+    if(company.instagram){
+      const ig = company.instagram.startsWith('http') ? company.instagram : 'https://instagram.com/' + company.instagram.replace(/^@/,'');
+      ct.push(`<a class="chip" href="${ig}" target="_blank" style="text-decoration:none">📸 انستجرام</a>`);
+    }
+    qs('contactChips').innerHTML = ct.join('');
 
     // مسح باركود تذكرة؟ ?ticket=CODE
     const ticket = param('ticket');
@@ -87,6 +96,8 @@ function openTrip(id){
         <h3 style="font-weight:900;font-size:18px">${esc(t.name)}</h3>
         <p class="route" style="font-size:15px">${esc(t.from)} ← ${esc(t.to)}</p>
         ${t.busNumber?`<p class="muted">🚌 رقم الباص: <b>${esc(t.busNumber)}</b></p>`:''}
+        ${(t.routeGo&&t.routeGo.length)?`<div class="tline"><span class="muted">🛣️ مسار الذهاب</span><b>${t.routeGo.map(esc).join(' ← ')}</b></div>`:''}
+        ${(t.routeBack&&t.routeBack.length)?`<div class="tline"><span class="muted">🛣️ مسار الرجوع</span><b>${t.routeBack.map(esc).join(' ← ')}</b></div>`:''}
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${t.recurring?'رحلة يومية':fmtDate(new Date(t.date+'T00:00'))}</b></div>
         <div class="tline"><span class="muted">🕖 وقت الانطلاق</span><b>${esc(t.time)}</b></div>
         <div class="tline"><span class="muted">💺 المقاعد المتاحة</span><b>${left} مقعد</b></div>
@@ -204,7 +215,11 @@ async function finalizeBooking(paymentMethod, status, receiptUrl){
   }catch(e){ console.error(e); toast('حدث خطأ، حاول مجددًا'); }
 }
 
-function statusLabel(s){ return s==='confirmed' ? ['b-green','مؤكد ✔'] : ['b-gold','بانتظار تأكيد الدفع']; }
+function statusLabel(s){
+  if(s==='confirmed') return ['b-green','مؤكد ✔'];
+  if(s==='cancelled') return ['b-red','ملغي ⛔'];
+  return ['b-gold','بانتظار تأكيد الدفع'];
+}
 
 function showTicket(b, bookingId, tripId){
   saveNavState({ ticket: b, bookingId: bookingId||null, tripId2: tripId||null });
@@ -225,7 +240,8 @@ function showTicket(b, bookingId, tripId){
     </div>
     <div class="notice" style="margin-top:14px">يرجى إبراز هذا الرمز عند الصعود إلى الحافلة</div>
     <div style="height:12px"></div>
-    ${bookingId ? `<button class="btn btn-danger" onclick="cancelMyBooking('${bookingId}','${tripId}',${b.seats})">إلغاء الحجز</button><div style="height:12px"></div>` : ''}
+    ${b.status==='cancelled' && b.cancelReason ? `<div class="notice" style="margin-top:14px;background:#fdeaea;color:var(--red)">⛔ أُلغي هذا الحجز من الشركة<br>السبب: ${esc(b.cancelReason)}</div><div style="height:12px"></div>` : ''}
+    ${bookingId && b.status!=='cancelled' ? `<button class="btn btn-danger" onclick="cancelMyBooking('${bookingId}','${tripId}',${b.seats})">إلغاء الحجز</button><div style="height:12px"></div>` : ''}
     <button class="btn btn-ghost" onclick="goHome()">العودة للرحلات</button>`;
   // باركود التذكرة = رابط تحقق مباشر: من يمسحه يرى صلاحية التذكرة وتفاصيلها
   const verifyUrl = companyLink(b.companySlug || company.slug) + '&ticket=' + b.code;
@@ -260,6 +276,7 @@ function findBookings(){
             <h3>${esc(b.tripName)}</h3>
             <div class="meta">${esc(b.date)} • ${esc(b.time)} • ${b.seats} مقعد</div>
             <span class="badge ${cls}" style="margin-top:5px">${label}</span>
+            ${b.status==='cancelled' && b.cancelReason ? `<div class="meta" style="color:var(--red)">السبب: ${esc(b.cancelReason)}</div>` : ''}
           </div>
         </div>`;
       }).join('') : '<div class="empty">لا توجد حجوزات على هذا الرقم</div>';

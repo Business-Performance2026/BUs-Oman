@@ -34,7 +34,7 @@ async function loadAdmin(){
   qs('stCo').textContent = allCompanies.length;
   qs('stBk').textContent = bk.size;
   qs('stTr').textContent = tr.size;
-  qs('stRev').textContent = bk.docs.reduce((s,d)=>{ const x=d.data(); return s+(x.price||0)*(x.seats||1); },0).toLocaleString();
+  qs('stRev').textContent = bk.docs.reduce((s,d)=>{ const x=d.data(); return x.status==='cancelled' ? s : s+(x.price||0)*(x.seats||1); },0).toLocaleString();
   qs('stAct').textContent = allCompanies.filter(c=>c.status==='active').length;
   const pending = allCompanies.filter(c=>c.status==='pending');
   qs('stPd').textContent = pending.length;

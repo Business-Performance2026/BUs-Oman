@@ -216,7 +216,7 @@ async function enterDashboard(){
   qs('stTrips').textContent = myTrips.length;
   qs('stBookings').textContent = bookings.length;
   qs('stEmps').textContent = e.size;
-  qs('stRevenue').textContent = bookings.reduce((s,x)=>s+(x.price||0)*(x.seats||1),0).toLocaleString();
+  qs('stRevenue').textContent = bookings.filter(x=>x.status!=='cancelled').reduce((s,x)=>s+(x.price||0)*(x.seats||1),0).toLocaleString();
   renderUpcoming();
   show('s-dash', false);
 }
@@ -280,6 +280,7 @@ function openAddTrip(){
   qs('tripFormTitle').textContent = 'إضافة رحلة';
   qs('tripErr').classList.remove('show');
   ['tName','tFrom','tTo','tBus','tDate','tTime','tSeats','tPrice'].forEach(i=>qs(i).value='');
+  ['go1','go2','go3','go4','go5','back1','back2','back3','back4','back5'].forEach(i=>qs(i).value='');
   qs('tRecurring').checked = false;
   fillBusList();
   show('s-addtrip');
@@ -295,6 +296,10 @@ function openEditTrip(id){
   qs('tDate').value=x.date||''; qs('tTime').value=x.time||'';
   qs('tSeats').value=x.seats||''; qs('tPrice').value=x.price??'';
   qs('tRecurring').checked=!!x.recurring;
+  for(let i=1;i<=5;i++){
+    qs('go'+i).value = (x.routeGo||[])[i-1]||'';
+    qs('back'+i).value = (x.routeBack||[])[i-1]||'';
+  }
   fillBusList();
   show('s-addtrip');
 }
@@ -304,6 +309,8 @@ async function saveTrip(){
         bus=qs('tBus').value.trim(),
         type=qs('tType').value, date=qs('tDate').value, time=qs('tTime').value,
         seats=+qs('tSeats').value, price=+qs('tPrice').value, recurring=qs('tRecurring').checked;
+  const routeGo = [1,2,3,4,5].map(i=>qs('go'+i).value.trim()).filter(Boolean);
+  const routeBack = [1,2,3,4,5].map(i=>qs('back'+i).value.trim()).filter(Boolean);
   if(!name||!from||!to||!bus||!date||!time||!seats||isNaN(price)){
     err('tripErr','يرجى تعبئة جميع الحقول المطلوبة'); return; }
   const btn=qs('tripBtn'); btn.disabled=true; btn.textContent='جارِ الحفظ...';
@@ -317,12 +324,12 @@ async function saveTrip(){
     }
     if(editTripId){
       await db.collection('trips').doc(editTripId).update({
-        name, from, to, busNumber: bus, type, date, time, seats, price, recurring });
+        name, from, to, busNumber: bus, type, date, time, seats, price, recurring, routeGo, routeBack });
       toast('تم تعديل الرحلة ✔');
     } else {
       await db.collection('trips').add({
         companyId: company.id, name, from, to, busNumber: bus, type, date, time,
-        seats, price, recurring, booked: 0, active: true, lastReset: new Date().toISOString().slice(0,10),
+        seats, price, recurring, routeGo, routeBack, booked: 0, active: true, lastReset: new Date().toISOString().slice(0,10),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       toast('تمت إضافة الرحلة ✔');
@@ -395,13 +402,19 @@ const PAY_LABEL = { cash:'💵 كاش', visa:'💳 فيزا', transfer:'🏦 ت�
 
 function waMessage(b){
   return encodeURIComponent(
-`مرحبًا ${b.name} 👋
-تفاصيل حجزك مع ${company.name}:
+`🌟 تفاصيل حجزك — ${company.name} 🌟
+━━━━━━━━━━━━━━━
+👤 الاسم: ${b.name}
 🚌 الرحلة: ${b.tripName}
 📅 التاريخ: ${b.date}
 🕖 الوقت: ${b.time}
 💺 عدد المقاعد: ${b.seats}
 🔖 رمز التذكرة: ${b.code}
+━━━━━━━━━━━━━━━
+📱 تواصل معنا واتساب: ${company.whatsapp||''}${company.contactCall?`
+📞 اتصال: ${company.contactCall}`:''}
+🔗 رحلاتنا وحجوزاتك: ${companyLink(company.slug)}
+
 نتشرف بخدمتك 🌹`);
 }
 
@@ -422,17 +435,18 @@ async function openBookings(){
               <p class="muted" style="font-size:12.5px">${esc(b.tripName)} • ${esc(b.date)} ${esc(b.time)}</p>
               <p dir="ltr" style="text-align:right;font-size:12px;color:var(--muted)">${esc(b.whatsapp)} • ${esc(b.code)}</p>
               <p style="font-size:12.5px">${PAY_LABEL[b.paymentMethod]||''}
-                ${b.status==='confirmed'
-                  ? '<span class="badge b-green">مؤكد</span>'
+                ${b.status==='confirmed' ? '<span class="badge b-green">مؤكد</span>'
+                  : b.status==='cancelled' ? '<span class="badge b-red">ملغي</span>'
                   : '<span class="badge b-gold">بانتظار تأكيد الدفع</span>'}
               </p>
+              ${b.status==='cancelled' ? `<p style="font-size:12px;color:var(--red)">سبب الإلغاء: ${esc(b.cancelReason||'')}</p>` : ''}
             </div>
           </div>
           <div class="bk-actions">
             <button class="icon-btn" style="background:#dff3e9;color:var(--green)" onclick="window.open('${waLink(b.whatsapp)}?text=${waMessage(b)}','_blank')">💬 واتساب</button>
-            ${b.status!=='confirmed' ? `<button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="confirmPay('${b.id}')">✔️ تأكيد الدفع</button>` : ''}
+            ${b.status!=='confirmed' && b.status!=='cancelled' ? `<button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="confirmPay('${b.id}')">✔️ تأكيد الدفع</button>` : ''}
             ${b.receiptUrl ? `<a class="icon-btn" style="background:#e8ecf8;color:var(--navy2);text-decoration:none;display:flex;align-items:center;justify-content:center" href="${b.receiptUrl}" target="_blank">📎 الوصل</a>` : ''}
-            <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats}')">✖️ إلغاء</button>
+            ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats}')">✖️ إلغاء</button>` : ''}
           </div>
         </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
     });
@@ -444,12 +458,16 @@ async function confirmPay(id){
 }
 
 function cancelBooking(id, tripId, seats){
-  confirmBox({ icon:'⚠️', title:'إلغاء الحجز', msg:'سيتم حذف الحجز وإرجاع المقاعد للرحلة فورًا.', ok:'نعم، إلغاء الحجز', danger:true },
-  async ()=>{
-    await db.collection('bookings').doc(id).delete();
-    await db.collection('trips').doc(tripId).update({
-      booked: firebase.firestore.FieldValue.increment(-seats) });
-    toast('تم إلغاء الحجز وأُرجعت المقاعد ✔');
+  promptBox({ icon:'✖️', title:'إلغاء الحجز', msg:'اكتب سبب الإلغاء — سيظهر للعميل في صفحة حجوزاته، وستُرجع المقاعد للرحلة فورًا.', placeholder:'مثال: تغيير موعد الرحلة، ظرف طارئ...', ok:'تأكيد الإلغاء', danger:true },
+  async (reason)=>{
+    try{
+      await db.collection('bookings').doc(id).update({
+        status:'cancelled', cancelReason: reason || 'بدون سبب محدد',
+        cancelledAt: firebase.firestore.FieldValue.serverTimestamp() });
+      await db.collection('trips').doc(tripId).update({
+        booked: firebase.firestore.FieldValue.increment(-seats) });
+      toast('تم إلغاء الحجز وأُرجعت المقاعد ✔'); // القائمة تتحدث لحظيًا
+    }catch(e){ console.error(e); toast('تعذر الإلغاء: ' + (e.code||e.message)); }
   });
 }
 
@@ -550,16 +568,22 @@ async function toggleEmp(id, val){
 }
 
 async function delEmp(id){
-  if(!confirm('حذف هذا الموظف؟')) return;
-  await db.collection('employees').doc(id).delete();
-  toast('تم حذف الموظف'); openEmps();
+  confirmBox({ icon:'🗑️', title:'حذف الموظف', msg:'سيتم حذف هذا الموظف نهائيًا ولن يستطيع الدخول للوحة.', ok:'نعم، حذف', danger:true },
+  async ()=>{
+    await db.collection('employees').doc(id).delete();
+    toast('تم حذف الموظف'); openEmps();
+  });
 }
 
 /* ===== الإعدادات ===== */
 function openSettings(){
   qs('sName').value = company.name || '';
+  qs('sCr').value = company.crNumber || '';
   qs('sDesc').value = company.desc || '';
   qs('sTransfer').value = company.transferPhone || '';
+  qs('sBankName').value = company.bankName || '';
+  qs('sCall').value = company.contactCall || '';
+  qs('sInsta').value = company.instagram || '';
   const pm = company.paymentMethods || {};
   qs('pmCash').checked = !!pm.cash;
   qs('pmVisa').checked = !!pm.visa;
@@ -589,6 +613,8 @@ async function saveSettings(){
       desc: qs('sDesc').value.trim(),
       transferPhone: qs('sTransfer').value.trim(),
       bankName: qs('sBankName').value.trim(),
+      contactCall: qs('sCall').value.trim(),
+      instagram: qs('sInsta').value.trim(),
       paymentMethods: {
         cash: qs('pmCash').checked,
         visa: qs('pmVisa').checked,

@@ -33,7 +33,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isAdmin()
         || (isStaff(id) && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['name','desc','transferPhone','paymentMethods','logoUrl','coverUrl','buses','crNumber','bankName']));
+              .hasOnly(['name','desc','transferPhone','paymentMethods','logoUrl','coverUrl','buses','crNumber','bankName','contactCall','instagram']));
       allow delete: if isAdmin();
     }
 

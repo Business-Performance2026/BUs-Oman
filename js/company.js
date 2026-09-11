@@ -115,7 +115,14 @@ async function enterDashboard(){
   qs('coLogo').innerHTML = company.logoUrl
     ? `<img src="${company.logoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px">` : '🚌';
   qs('dName').textContent = company.name;
-  qs('dEmail').textContent = company.email;
+  qs('dCr').textContent = company.crNumber ? ('سجل تجاري: ' + company.crNumber) : '';
+  // يظهر إيميل الحساب المسجّل دخوله فعليًا (مالك أو موظف)
+  qs('dEmail').textContent = (currentUser?.email || company.email) + (isEmployee ? ' — موظف' : '');
+
+  // إعلان الإدارة للشركة: يظهر كل مرة يُفتح التطبيق ما دام مفعّلًا
+  if(company.announcement?.active && company.announcement?.text){
+    setTimeout(()=> infoBox({ icon:'📢', title:'تنبيه من إدارة المنصة', msg: esc(company.announcement.text) }), 600);
+  }
 
   // تنبيه الاشتراك: يظهر فقط عند بقاء 7 أيام أو أقل
   const dl = daysLeft(company);
@@ -123,6 +130,7 @@ async function enterDashboard(){
     ? `<div class="notice" style="margin-bottom:14px">${company.subscriptionEnd?.seconds?'ينتهي اشتراكك':'تنتهي فترتك التجريبية'} خلال <b>${dl}</b> يوم — جدّد الآن لتجنب التوقف</div>` : '';
 
   // واجهة الموظف حسب الصلاحيات
+  qs('dashStats').style.display = isEmployee ? 'none' : '';
   qs('ownerActions').style.display = isEmployee ? 'none' : '';
   qs('calAddBtn').style.display = isEmployee ? 'none' : '';
   qs('dashNav').querySelectorAll('[data-owner]').forEach(b=> b.style.display = isEmployee ? 'none' : '');
@@ -263,11 +271,13 @@ async function toggleTrip(id, val){
   await refreshTrips(); renderDay(); renderUpcoming(); qs('stTrips').textContent = myTrips.length;
 }
 
-async function delTrip(id){
-  if(!confirm('حذف هذه الرحلة نهائيًا؟')) return;
-  await db.collection('trips').doc(id).delete();
-  toast('تم حذف الرحلة');
-  await refreshTrips(); renderDay(); renderUpcoming(); qs('stTrips').textContent = myTrips.length;
+function delTrip(id){
+  confirmBox({ icon:'🗑️', title:'حذف الرحلة', msg:'سيتم حذف الرحلة نهائيًا ولا يمكن التراجع.', ok:'نعم، حذف', danger:true },
+  async ()=>{
+    await db.collection('trips').doc(id).delete();
+    toast('تم حذف الرحلة');
+    await refreshTrips(); renderDay(); renderUpcoming(); qs('stTrips').textContent = myTrips.length;
+  });
 }
 
 /* ===== الكالندر ===== */
@@ -322,41 +332,49 @@ function waMessage(b){
 async function openBookings(){
   show('s-bookings');
   qs('bookingsList').innerHTML = '<div class="empty"><span class="spin"></span> جارِ التحميل...</div>';
-  const snap = await db.collection('bookings').where('companyId','==',company.id).get();
-  const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
-    .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-  const ownerBtns = b => isEmployee ? '' : `
-      ${b.status!=='confirmed' ? `<button class="icon-btn" style="background:#dff3e9" title="تأكيد الدفع" onclick="event.stopPropagation();confirmPay('${b.id}')">✔️</button>` : ''}
-      <button class="icon-btn" onclick="event.stopPropagation();cancelBooking('${b.id}','${b.tripId}',${b.seats})">✖️</button>`;
-  qs('bookingsList').innerHTML = rows.length ? rows.map(b=>`
-    <div class="lrow" style="cursor:pointer" onclick="window.open('${waLink(b.whatsapp)}?text=${waMessage(b)}','_blank')">
-      <div class="ava">${esc(b.name).charAt(0)}</div>
-      <div class="grow">
-        <h4>${esc(b.name)} <span class="badge b-teal">${b.seats} مقعد</span></h4>
-        <p>${esc(b.tripName)} • ${esc(b.date)} ${esc(b.time)}</p>
-        <p dir="ltr" style="text-align:right">${esc(b.whatsapp)} • ${esc(b.code)}</p>
-        <p>${PAY_LABEL[b.paymentMethod]||''}
-          ${b.status==='confirmed'
-            ? '<span class="badge b-green">مؤكد</span>'
-            : '<span class="badge b-gold">بانتظار تأكيد الدفع</span>'}
-          ${b.receiptUrl ? `<a href="${b.receiptUrl}" target="_blank" class="badge b-teal" style="text-decoration:none" onclick="event.stopPropagation()">📎 عرض الوصل</a>` : ''}
-        </p>
-      </div>
-      ${ownerBtns(b)}
-    </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
+  // تحديث لحظي: أي تغيير يظهر فورًا بدون تحديث الصفحة
+  db.collection('bookings').where('companyId','==',company.id)
+    .onSnapshot(snap=>{
+      const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
+        .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      qs('bookingsList').innerHTML = rows.length ? rows.map(b=>`
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div class="ava" style="width:44px;height:44px;border-radius:14px;background:var(--teal-l);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;flex-shrink:0">${esc(b.name).charAt(0)}</div>
+            <div style="flex:1;min-width:0">
+              <h4 style="font-weight:800">${esc(b.name)} <span class="badge b-teal">${b.seats} مقعد</span></h4>
+              <p class="muted" style="font-size:12.5px">${esc(b.tripName)} • ${esc(b.date)} ${esc(b.time)}</p>
+              <p dir="ltr" style="text-align:right;font-size:12px;color:var(--muted)">${esc(b.whatsapp)} • ${esc(b.code)}</p>
+              <p style="font-size:12.5px">${PAY_LABEL[b.paymentMethod]||''}
+                ${b.status==='confirmed'
+                  ? '<span class="badge b-green">مؤكد</span>'
+                  : '<span class="badge b-gold">بانتظار تأكيد الدفع</span>'}
+              </p>
+            </div>
+          </div>
+          <div class="bk-actions">
+            <button class="icon-btn" style="background:#dff3e9;color:var(--green)" onclick="window.open('${waLink(b.whatsapp)}?text=${waMessage(b)}','_blank')">💬 واتساب</button>
+            ${b.status!=='confirmed' ? `<button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="confirmPay('${b.id}')">✔️ تأكيد الدفع</button>` : ''}
+            ${b.receiptUrl ? `<a class="icon-btn" style="background:#e8ecf8;color:var(--navy2);text-decoration:none;display:flex;align-items:center;justify-content:center" href="${b.receiptUrl}" target="_blank">📎 الوصل</a>` : ''}
+            <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats}')">✖️ إلغاء</button>
+          </div>
+        </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
+    });
 }
 
 async function confirmPay(id){
   await db.collection('bookings').doc(id).update({ status:'confirmed', paymentStatus:'confirmed' });
-  toast('تم تأكيد الدفع ✔'); openBookings();
+  toast('تم تأكيد الدفع ✔'); // القائمة تتحدث لحظيًا تلقائيًا
 }
 
-async function cancelBooking(id, tripId, seats){
-  if(!confirm('إلغاء هذا الحجز وإرجاع المقاعد؟')) return;
-  await db.collection('bookings').doc(id).delete();
-  await db.collection('trips').doc(tripId).update({
-    booked: firebase.firestore.FieldValue.increment(-seats) });
-  toast('تم إلغاء الحجز وأُرجعت المقاعد ✔'); openBookings();
+function cancelBooking(id, tripId, seats){
+  confirmBox({ icon:'⚠️', title:'إلغاء الحجز', msg:'سيتم حذف الحجز وإرجاع المقاعد للرحلة فورًا.', ok:'نعم، إلغاء الحجز', danger:true },
+  async ()=>{
+    await db.collection('bookings').doc(id).delete();
+    await db.collection('trips').doc(tripId).update({
+      booked: firebase.firestore.FieldValue.increment(-seats) });
+    toast('تم إلغاء الحجز وأُرجعت المقاعد ✔');
+  });
 }
 
 /* ===== الموظفون: إضافة + تعديل + صلاحيات ===== */
@@ -468,6 +486,11 @@ function openSettings(){
   show('s-settings');
 }
 
+async function deleteOldImage(url){
+  if(!url) return;
+  try{ await firebase.storage().refFromURL(url).delete(); }catch(e){ /* قد تكون محذوفة */ }
+}
+
 async function uploadImage(fileInput, kind){
   const file = qs(fileInput).files[0];
   if(!file) return null;
@@ -480,8 +503,10 @@ async function saveSettings(){
   try{
     const data = {
       name: qs('sName').value.trim() || company.name,
+      crNumber: qs('sCr').value.trim(),
       desc: qs('sDesc').value.trim(),
       transferPhone: qs('sTransfer').value.trim(),
+      bankName: qs('sBankName').value.trim(),
       paymentMethods: {
         cash: qs('pmCash').checked,
         visa: qs('pmVisa').checked,
@@ -490,12 +515,13 @@ async function saveSettings(){
     };
     const logoUrl = await uploadImage('sLogo','logo');
     const coverUrl = await uploadImage('sCover','cover');
-    if(logoUrl) data.logoUrl = logoUrl;
-    if(coverUrl) data.coverUrl = coverUrl;
+    if(logoUrl){ data.logoUrl = logoUrl; await deleteOldImage(company.logoUrl); } // حذف القديمة من Storage
+    if(coverUrl){ data.coverUrl = coverUrl; await deleteOldImage(company.coverUrl); }
 
     await db.collection('companies').doc(company.id).update(data);
     Object.assign(company, data);
     qs('dName').textContent = company.name;
+    qs('dCr').textContent = company.crNumber ? ('سجل تجاري: ' + company.crNumber) : '';
     if(data.logoUrl) qs('coLogo').innerHTML = `<img src="${data.logoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px">`;
     if(data.coverUrl) qs('coCover').style.backgroundImage = `url('${data.coverUrl}')`;
     toast('تم حفظ الإعدادات ✔');

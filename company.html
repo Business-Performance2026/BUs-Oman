@@ -119,7 +119,7 @@
 
   <!-- جدول الرحلات -->
   <section class="screen" id="s-cal">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>جدول الرحلات</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>جدول الرحلات</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <div class="cal">
         <div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:10px">
@@ -137,7 +137,7 @@
 
   <!-- إضافة / تعديل رحلة -->
   <section class="screen" id="s-addtrip">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1 id="tripFormTitle">إضافة رحلة</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1 id="tripFormTitle">إضافة رحلة</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <div class="error" id="tripErr"></div>
       <div class="card">
@@ -169,7 +169,7 @@
 
   <!-- الحجوزات الواردة -->
   <section class="screen" id="s-bookings">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الحجوزات الواردة</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الحجوزات الواردة</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <p class="muted" style="margin-bottom:10px">اضغط على الحجز لمراسلة العميل واتساب برسالة جاهزة 💬</p>
       <div id="bookingsList"></div>
@@ -178,7 +178,7 @@
 
   <!-- الموظفون -->
   <section class="screen" id="s-emps">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الموظفون</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الموظفون</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <div class="card">
         <h3 style="font-weight:900;margin-bottom:12px" id="empFormTitle">إضافة موظف</h3>
@@ -205,15 +205,17 @@
 
   <!-- الإعدادات -->
   <section class="screen" id="s-settings">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الإعدادات</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الإعدادات</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <div class="card">
         <h3 style="font-weight:900;margin-bottom:12px">هوية الشركة</h3>
         <div class="field"><label>شعار الشركة</label><input type="file" id="sLogo" accept="image/*" style="font-family:inherit"></div>
         <div class="field"><label>صورة الغلاف</label><input type="file" id="sCover" accept="image/*" style="font-family:inherit"></div>
         <div class="field"><label>اسم الشركة</label><input id="sName"></div>
+        <div class="field"><label>رقم السجل التجاري</label><input id="sCr" inputmode="numeric" placeholder="1234567" dir="ltr" style="text-align:right"></div>
         <div class="field"><label>وصف قصير</label><input id="sDesc"></div>
         <div class="field"><label>رقم التحويل البنكي (هاتف مربوط بالبنك)</label><input id="sTransfer" inputmode="tel" placeholder="9xxxxxxx" dir="ltr" style="text-align:right"></div>
+        <div class="field"><label>اسم صاحب الحساب البنكي</label><input id="sBankName" placeholder="مثال: الحساب باسم أحمد الراشدي"></div>
       </div>
       <div class="card">
         <h3 style="font-weight:900;margin-bottom:12px">طرق الدفع المتاحة للعملاء</h3>
@@ -227,7 +229,7 @@
 
   <!-- الرابط والباركود -->
   <section class="screen" id="s-qr">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>رابط وباركود الشركة</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>رابط وباركود الشركة</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <div class="qr-box">
         <div class="qr-holder" id="coQr"></div>

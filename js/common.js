@@ -95,3 +95,65 @@ function daysLeft(c){
   if(!end) return null;
   return Math.max(0, Math.ceil((end - now)/86400));
 }
+
+/* ===== نوافذ منبثقة أنيقة ===== */
+function closeModal(){ document.querySelectorAll('.mback').forEach(m=>m.remove()); }
+
+function confirmBox({icon='❓', title, msg, ok='تأكيد', danger=false}, onOk){
+  closeModal();
+  const m = document.createElement('div');
+  m.className = 'mback';
+  m.innerHTML = `<div class="modal">
+    <div class="m-ic">${icon}</div>
+    <h3>${title}</h3>
+    <p>${msg}</p>
+    <div class="row">
+      <button class="btn btn-ghost" id="mNo">إلغاء</button>
+      <button class="btn ${danger?'btn-danger':'btn-primary'}" id="mOk">${ok}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.querySelector('#mNo').onclick = closeModal;
+  m.querySelector('#mOk').onclick = ()=>{ closeModal(); onOk(); };
+  m.onclick = e => { if(e.target===m) closeModal(); };
+}
+
+function promptBox({icon='✏️', title, msg='', placeholder='', ok='حفظ', danger=false}, onOk){
+  closeModal();
+  const m = document.createElement('div');
+  m.className = 'mback';
+  m.innerHTML = `<div class="modal">
+    <div class="m-ic">${icon}</div>
+    <h3>${title}</h3>
+    ${msg?`<p>${msg}</p>`:''}
+    <textarea id="mText" placeholder="${placeholder}"></textarea>
+    <div class="row">
+      <button class="btn btn-ghost" id="mNo">إلغاء</button>
+      <button class="btn ${danger?'btn-danger':'btn-primary'}" id="mOk">${ok}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.querySelector('#mNo').onclick = closeModal;
+  m.querySelector('#mOk').onclick = ()=>{
+    const v = m.querySelector('#mText').value.trim();
+    closeModal(); onOk(v);
+  };
+  m.onclick = e => { if(e.target===m) closeModal(); };
+}
+
+function infoBox({icon='📢', title, msg, ok='حسنًا'}){
+  closeModal();
+  const m = document.createElement('div');
+  m.className = 'mback';
+  m.innerHTML = `<div class="modal">
+    <div class="m-ic">${icon}</div>
+    <h3>${title}</h3>
+    <p>${msg}</p>
+    <button class="btn btn-primary" id="mOk">${ok}</button>
+  </div>`;
+  document.body.appendChild(m);
+  m.querySelector('#mOk').onclick = closeModal;
+}
+
+// زر خروج مربع يظهر في كل صفحات الشركة
+const LOGOUT_BTN = '<button class="side" onclick="logout()" style="font-weight:800">⎋ خروج</button>';

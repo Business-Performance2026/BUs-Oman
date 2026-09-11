@@ -22,7 +22,13 @@ async function init(){
     }
     document.title = company.name + ' — رحلاتك';
     qs('coName').textContent = company.name;
+    qs('coCr').textContent = company.crNumber ? ('سجل تجاري: ' + company.crNumber) : '';
+    if(company.logoUrl) qs('coLogoC').innerHTML = `<img src="${company.logoUrl}" style="width:100%;height:100%;object-fit:cover">`;
     qs('coSub').textContent = company.desc || 'حجوزات النقل عبر منصة رحلاتك';
+
+    // مسح باركود تذكرة؟ ?ticket=CODE
+    const ticket = param('ticket');
+    if(ticket){ verifyTicket(ticket); return; }
     loadTrips();
   }catch(e){ console.error(e); qs('errMsg').textContent='تعذر الاتصال، تحقق من الإنترنت'; show('s-404', false); }
 }
@@ -142,7 +148,7 @@ function renderTransfer(){
       <div style="font-size:40px">🏦</div>
       <h3 style="font-weight:900;margin:8px 0">حوّل إلى الرقم التالي</h3>
       <div style="background:#f4f7f9;border-radius:14px;padding:14px;font-size:22px;font-weight:900;letter-spacing:2px" dir="ltr">${esc(phone)}</div>
-      <p class="muted" style="margin-top:8px;font-size:12.5px">الرقم مربوط بالحساب البنكي لشركة ${esc(company.name)}</p>
+      <p class="muted" style="margin-top:8px;font-size:12.5px">${esc(company.bankName || ('الحساب البنكي لشركة ' + company.name))}</p>
     </div>
     <div class="card">
       <h3 style="font-weight:900;margin-bottom:10px">أرفق صورة الوصل *</h3>
@@ -173,7 +179,7 @@ async function finalizeBooking(paymentMethod, status, receiptUrl){
     await db.collection('bookings').add({
       tripId: t.id, companyId: company.id, tripName: t.name,
       from: t.from, to: t.to,
-      name: p.name, nationalId: p.nationalId, whatsapp: p.whatsapp, seats: p.seats,
+      name: p.name, whatsapp: p.whatsapp, seats: p.seats,
       date: t.recurring ? 'يوميًا' : t.date, time: t.time, price: t.price,
       paymentMethod, paymentStatus: status==='confirmed'?'confirmed':'pending',
       receiptUrl: receiptUrl || null,
@@ -212,7 +218,9 @@ function showTicket(b, bookingId, tripId){
     <div style="height:12px"></div>
     ${bookingId ? `<button class="btn btn-danger" onclick="cancelMyBooking('${bookingId}','${tripId}',${b.seats})">إلغاء الحجز</button><div style="height:12px"></div>` : ''}
     <button class="btn btn-ghost" onclick="goHome()">العودة للرحلات</button>`;
-  makeQR(qs('qrT'), b.code, 140);
+  // باركود التذكرة = رابط تحقق مباشر: من يمسحه يرى صلاحية التذكرة وتفاصيلها
+  const verifyUrl = companyLink(b.companySlug || company.slug) + '&ticket=' + b.code;
+  makeQR(qs('qrT'), verifyUrl, 140);
   show('s-ticket');
 }
 
@@ -245,16 +253,18 @@ async function findBookings(){
   }).join('') : '<div class="empty">لا توجد حجوزات على هذا الرقم</div>';
 }
 
-async function cancelMyBooking(id, tripId, seats){
-  if(!confirm('إلغاء هذا الحجز؟ سيتم تحرير مقعدك.')) return;
-  try{
-    await db.collection('bookings').doc(id).delete();
-    await db.collection('trips').doc(tripId).update({
-      booked: firebase.firestore.FieldValue.increment(-seats)
-    });
-    toast('تم إلغاء الحجز ✔');
-    loadTrips();
-    goHome();
-    if(lastFindWa){ qs('findWa').value = lastFindWa; }
-  }catch(e){ console.error(e); toast('تعذر الإلغاء، حاول مجددًا'); }
+function cancelMyBooking(id, tripId, seats){
+  confirmBox({ icon:'⚠️', title:'إلغاء الحجز', msg:'سيتم إلغاء حجزك وتحرير مقعدك فورًا.', ok:'نعم، إلغاء الحجز', danger:true },
+  async ()=>{
+    try{
+      await db.collection('bookings').doc(id).delete();
+      await db.collection('trips').doc(tripId).update({
+        booked: firebase.firestore.FieldValue.increment(-seats)
+      });
+      toast('تم إلغاء الحجز ✔');
+      // تحديث القائمة فورًا بدون تحديث الصفحة
+      if(lastFindWa){ qs('findWa').value = lastFindWa; findBookings(); show('s-find'); }
+      else goHome();
+    }catch(e){ console.error(e); toast('تعذر الإلغاء، حاول مجددًا'); }
+  });
 }

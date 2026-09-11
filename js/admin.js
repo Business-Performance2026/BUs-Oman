@@ -77,16 +77,20 @@ function renderCompanies(){
 }
 
 async function setStatus(id, status){
-  const data = { status };
   if(status === 'suspended'){
-    const reason = prompt('اكتب سبب الإيقاف (سيظهر لصاحب الشركة):');
-    if(reason === null) return; // ألغى
-    data.suspensionReason = reason.trim() || 'لم يُذكر سبب';
-  } else if(status === 'active'){
-    data.suspensionReason = firebase.firestore.FieldValue.delete();
+    promptBox({ icon:'⛔', title:'إيقاف الشركة', msg:'اكتب سبب الإيقاف — سيظهر لصاحب الشركة عند دخوله.', placeholder:'مثال: تأخر سداد الاشتراك...', ok:'إيقاف الشركة', danger:true },
+    async (reason)=>{
+      await db.collection('companies').doc(id).update({
+        status:'suspended', suspensionReason: reason || 'لم يُذكر سبب' });
+      toast('تم إيقاف الشركة');
+      await loadAdmin();
+    });
+    return;
   }
+  const data = { status };
+  if(status === 'active') data.suspensionReason = firebase.firestore.FieldValue.delete();
   await db.collection('companies').doc(id).update(data);
-  toast(status==='active'?'تم تفعيل الشركة ✔ — رابطها وباركودها يعملان الآن':'تم إيقاف الشركة');
+  toast('تم تفعيل الشركة ✔ — رابطها وباركودها يعملان الآن');
   await loadAdmin();
 }
 
@@ -123,10 +127,18 @@ async function openCompany(id){
       </div>
     </div>
     <h2 class="sec">الاشتراك</h2>
-    <div class="row">
-      <button class="btn btn-ghost" onclick="extendSub('${c.id}',30)">＋ 30 يوم</button>
-      <button class="btn btn-ghost" onclick="extendSub('${c.id}',90)">＋ 90 يوم</button>
-      <button class="btn btn-ghost" onclick="extendSub('${c.id}',365)">＋ سنة</button>
+    <div class="card" style="display:flex;gap:10px;align-items:center">
+      <input type="number" id="subDays" min="1" placeholder="عدد الأيام" style="flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px;font-family:inherit;font-size:15px;outline:none" inputmode="numeric">
+      <button class="btn btn-teal" style="width:auto;padding:12px 22px" onclick="extendSubInput('${c.id}')">تمديد ✔</button>
+    </div>
+    <h2 class="sec">📢 إعلان للشركة</h2>
+    <div class="card">
+      <div class="field"><textarea id="annText" rows="3" placeholder="اكتب إعلانًا يظهر للشركة في كل مرة تفتح التطبيق..." style="width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;font-family:inherit;font-size:14px;outline:none;resize:vertical">${esc(c.announcement?.text||'')}</textarea></div>
+      <div class="row">
+        <button class="btn btn-teal" onclick="setAnnouncement('${c.id}', true)">📢 تفعيل الإعلان</button>
+        <button class="btn btn-ghost" onclick="setAnnouncement('${c.id}', false)">إيقاف الإعلان</button>
+      </div>
+      ${c.announcement?.active ? '<p class="muted center" style="margin-top:8px;font-size:12px">الإعلان مفعّل حاليًا ✔</p>' : ''}
     </div>
     <div style="height:12px"></div>
     <button class="btn btn-ghost" onclick="resetPass('${esc(c.email)}')">🔑 إرسال رابط إعادة تعيين كلمة المرور</button>
@@ -135,6 +147,12 @@ async function openCompany(id){
     ${c.status!=='suspended' ? `<button class="btn btn-danger" onclick="setStatus('${c.id}','suspended')">⛔ إيقاف الشركة</button>` : ''}`;
   makeQR(qs('admQr'), link, 170);
   show('s-co');
+}
+
+async function extendSubInput(id){
+  const days = +qs('subDays').value;
+  if(!days || days < 1){ toast('اكتب عدد الأيام أولًا'); return; }
+  await extendSub(id, days);
 }
 
 async function extendSub(id, days){
@@ -147,6 +165,18 @@ async function extendSub(id, days){
   });
   c.subscriptionEnd = firebase.firestore.Timestamp.fromDate(end);
   toast(`تم تمديد الاشتراك ${days} يوم ✔`);
+  openCompany(id);
+}
+
+async function setAnnouncement(id, active){
+  const text = qs('annText').value.trim();
+  if(active && !text){ toast('اكتب نص الإعلان أولًا'); return; }
+  await db.collection('companies').doc(id).update({
+    announcement: { text, active }
+  });
+  const c = allCompanies.find(x=>x.id===id);
+  c.announcement = { text, active };
+  toast(active ? 'الإعلان مفعّل — سيظهر للشركة عند كل فتح للتطبيق' : 'تم إيقاف الإعلان');
   openCompany(id);
 }
 

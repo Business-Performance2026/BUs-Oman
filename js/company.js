@@ -159,7 +159,9 @@ async function enterDashboard(){
 
 function renderUpcoming(){
   const today = new Date().toISOString().slice(0,10);
-  const upcoming = myTrips.filter(x=>x.active && (x.recurring || x.date>=today)).slice(0,3);
+  // الرحلات الموقوفة تبقى ظاهرة مع شارة حمراء "موقوفة"
+  const upcoming = myTrips.filter(x=>x.recurring || x.date>=today)
+    .sort((a,b)=> (b.active-a.active) || (a.date+a.time).localeCompare(b.date+b.time)).slice(0,5);
   qs('dashTrips').innerHTML = upcoming.length ? upcoming.map(tripRow).join('')
     : '<div class="empty">لا توجد رحلات بعد — أضف أول رحلة</div>';
 }
@@ -537,13 +539,12 @@ async function saveSettings(){
 
 /* ===== الرابط والباركود ===== */
 function openQR(){
-  const link = companyLink(company.slug);
-  qs('coLink').textContent = link;
-  makeQR(qs('coQr'), link, 200);
+  myLink = companyLink(company.slug);
+  makeQR(qs('coQr'), myLink, 200);
   show('s-qr');
 }
 
 function copyLink(){
-  navigator.clipboard.writeText(qs('coLink').textContent)
+  navigator.clipboard.writeText(myLink)
     .then(()=>toast('تم نسخ الرابط')).catch(()=>toast('انسخ الرابط يدويًا'));
 }

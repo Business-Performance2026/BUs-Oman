@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 <div id="phone">
@@ -81,16 +81,16 @@
     <!-- غلاف الشركة: اسم + شعار + خروج -->
     <div class="cover" id="coCover">
       <button class="logout-btn" onclick="logout()">⎋ خروج</button>
-      <div class="co-id">
+      <div class="co-id2">
         <div class="co-logo" id="coLogo">🚌</div>
-        <div class="co-meta">
+        <div class="co-badge">
           <h1 id="dName"></h1>
-          <p id="dEmail" dir="ltr" style="text-align:right"></p>
-          <p id="dCr" class="muted" style="font-size:12.5px"></p>
+          <p id="dEmail" dir="ltr" style="text-align:center"></p>
+          <p id="dCr" style="font-size:12.5px;font-weight:700"></p>
         </div>
       </div>
     </div>
-    <div class="wrap" style="padding-top:48px">
+    <div class="wrap" style="padding-top:70px">
       <div id="trialNote"></div>
       <div class="stats" id="dashStats">
         <div class="stat"><div class="ic" style="background:var(--teal-l)">🗓️</div><b id="stTrips">0</b><span>إجمالي الرحلات</span></div>
@@ -112,7 +112,6 @@
       <button class="on" onclick="show('s-dash')"><span class="i">🏠</span>الرئيسية</button>
       <button data-perm="cal" onclick="openCal()"><span class="i">🗓️</span>الجدول</button>
       <button data-perm="bookings" onclick="openBookings()"><span class="i">🎫</span>الحجوزات</button>
-      <button data-perm="qr" onclick="openQR()"><span class="i">🔗</span>الباركود</button>
       <button data-owner onclick="openEmps()"><span class="i">👥</span>الموظفون</button>
       <button data-owner onclick="openSettings()"><span class="i">⚙️</span>الإعدادات</button>
     </nav>
@@ -251,8 +250,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=5"></script>
-<script src="js/common.js?v=5"></script>
-<script src="js/company.js?v=5"></script>
+<script src="js/firebase-config.js?v=6"></script>
+<script src="js/common.js?v=6"></script>
+<script src="js/company.js?v=6"></script>
 </body>
 </html>

@@ -44,6 +44,7 @@ function loadTrips(){
         .filter(t => t.recurring || t.date >= today)
         .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
       renderTrips();
+      if(!window._restored){ window._restored = true; restoreSession(); }
     }, e=>{
       console.error(e);
       qs('tripsList').innerHTML = '<div class="empty">تعذر تحميل الرحلات — حدّث الصفحة</div>';
@@ -61,9 +62,8 @@ function renderTrips(){
       <div style="flex:1">
         <h3>${esc(t.name)}</h3>
         <div class="route">${esc(t.from)} ← ${esc(t.to)}</div>
-        <div class="meta">${t.recurring?'يوميًا':esc(t.date)} ${esc(t.time)}${t.busNumber?' • 🚌 '+esc(t.busNumber):''}</div>
-        <span class="badge ${left>5?'b-green':left>0?'b-gold':'b-red'}" style="margin-top:5px">
-          ${left>0 ? left+' مقعد متاح' : 'مكتملة'}</span>
+        <div class="meta">📅 ${t.recurring?'يوميًا':esc(t.date)} • 🕖 ${esc(t.time)}</div>
+        <div class="meta">${t.busNumber?'🚌 '+esc(t.busNumber)+' • ':''}💺 ${left>0 ? 'متبقي '+left+'/'+t.seats : 'مكتملة'}</div>
       </div>
       <div class="price">${t.price} ر.ع</div>
     </div>`;
@@ -78,6 +78,7 @@ qs('typeChips').addEventListener('click', e=>{
 
 function openTrip(id){
   currentTrip = trips.find(t=>t.id===id);
+  saveNavState({ tripId: id });
   const t = currentTrip, left = seatsLeft(t);
   qs('tripDetail').innerHTML = `
     <div class="card" style="padding:0;overflow:hidden">
@@ -98,15 +99,16 @@ function openTrip(id){
 
 /* ===== خطوة 1: بيانات المسافر ثم اختيار الدفع ===== */
 function submitBooking(){
-  const name=qs('bName').value.trim(), nid=qs('bId').value.trim(),
+  const name=qs('bName').value.trim(),
         wa=qs('bWa').value.trim(), seats=+qs('bSeats').value;
   const err = qs('bookErr');
   err.classList.remove('show');
-  if(!name || !nid || !wa){ err.textContent='يرجى تعبئة جميع الحقول المطلوبة'; err.classList.add('show'); return; }
+  if(!name || !wa){ err.textContent='يرجى تعبئة جميع الحقول المطلوبة'; err.classList.add('show'); return; }
   if(!/^\d{8,15}$/.test(wa.replace(/\D/g,''))){ err.textContent='رقم الواتساب غير صحيح'; err.classList.add('show'); return; }
   const t = currentTrip, left = seatsLeft(t);
   if(seats > left){ err.textContent='عدد المقاعد المطلوب أكبر من المتاح ('+left+')'; err.classList.add('show'); return; }
-  pendingBooking = { name, nationalId: nid, whatsapp: wa, seats };
+  pendingBooking = { name, whatsapp: wa, seats };
+  saveNavState({ tripId: currentTrip.id, pending: { name, whatsapp: wa, seats } });
   renderPayment();
 }
 
@@ -205,6 +207,7 @@ async function finalizeBooking(paymentMethod, status, receiptUrl){
 function statusLabel(s){ return s==='confirmed' ? ['b-green','مؤكد ✔'] : ['b-gold','بانتظار تأكيد الدفع']; }
 
 function showTicket(b, bookingId, tripId){
+  saveNavState({ ticket: b, bookingId: bookingId||null, tripId2: tripId||null });
   const [cls,label] = statusLabel(b.status);
   qs('ticketBox').innerHTML = `
     <div class="ticket">
@@ -277,4 +280,17 @@ function cancelMyBooking(id, tripId, seats){
       else goHome();
     }catch(e){ console.error(e); toast('تعذر الإلغاء، حاول مجددًا'); }
   });
+}
+
+/* ===== استعادة الجلسة بعد تحديث الصفحة ===== */
+function restoreSession(){
+  const saved = SAVED_AT_LOAD.screen;
+  if(!saved || saved==='s-home' || saved==='s-404') return;
+  let st = {}; try{ st = JSON.parse(SAVED_AT_LOAD.state||'{}'); }catch(e){}
+  const t = st.tripId ? trips.find(x=>x.id===st.tripId) : null;
+  if(saved==='s-trip' && t){ openTrip(t.id); return; }
+  if(saved==='s-book' && t){ currentTrip=t; show('s-book'); restoreDraft('s-book'); return; }
+  if(saved==='s-pay' && t && st.pending){ currentTrip=t; pendingBooking=st.pending; renderPayment(); return; }
+  if(saved==='s-ticket' && st.ticket){ showTicket(st.ticket, st.bookingId, st.tripId2); return; }
+  if(saved==='s-find'){ show('s-find'); restoreDraft('s-find'); }
 }

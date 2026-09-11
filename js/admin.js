@@ -22,6 +22,7 @@ const STATUS = {
   suspended:['b-red','موقوفة']
 };
 
+let _adminRestored = false;
 async function loadAdmin(){
   history.replaceState({s:'s-dash'},''); _navStack=['s-dash'];
   const [co, bk, tr] = await Promise.all([
@@ -40,6 +41,16 @@ async function loadAdmin(){
   qs('pendingList').innerHTML = pending.length ? pending.map(coRow).join('')
     : '<div class="empty">لا توجد طلبات جديدة ✔</div>';
   show('s-dash', false);
+  // استعادة الصفحة التي كان عليها الأدمن قبل التحديث
+  if(!_adminRestored){
+    _adminRestored = true;
+    const saved = SAVED_AT_LOAD.screen;
+    if(saved==='s-companies'){ openCompanies(); restoreDraft('s-companies'); }
+    else if(saved==='s-co'){
+      let st={}; try{ st=JSON.parse(SAVED_AT_LOAD.state||'{}'); }catch(e){}
+      if(st.coId && allCompanies.find(x=>x.id===st.coId)) openCompany(st.coId);
+    }
+  }
 }
 
 function coRow(c){
@@ -60,7 +71,7 @@ function coRow(c){
 }
 
 /* ===== صفحة الشركات مع الفلاتر ===== */
-function openCompanies(){ renderCompanies(); show('s-companies'); }
+function openCompanies(){ saveNavState({}); renderCompanies(); show('s-companies'); }
 function showOnly(s){
   statusFilter = s;
   document.querySelectorAll('#statusChips .chip').forEach(c=>c.classList.toggle('on', c.dataset.s===s));
@@ -96,6 +107,7 @@ async function setStatus(id, status){
 
 /* ===== تفاصيل شركة ===== */
 async function openCompany(id){
+  saveNavState({ coId: id });
   const c = allCompanies.find(x=>x.id===id);
   const link = companyLink(c.slug);
   const [t, b, e] = await Promise.all([

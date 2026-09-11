@@ -9,6 +9,35 @@ function toast(msg){
   clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2500);
 }
 
+/* ===== استمرارية الجلسة: الصفحة والبيانات تبقى بعد تحديث الصفحة ===== */
+const _pgKey = location.pathname.split('/').pop() || 'index.html';
+const SAVED_AT_LOAD = {
+  screen: sessionStorage.getItem(_pgKey+':screen'),
+  draft:  sessionStorage.getItem(_pgKey+':draft'),
+  state:  sessionStorage.getItem(_pgKey+':state')
+};
+function saveNavState(obj){ sessionStorage.setItem(_pgKey+':state', JSON.stringify(obj||{})); }
+function restoreDraft(id){
+  try{
+    const d = JSON.parse(SAVED_AT_LOAD.draft||'null');
+    if(d && d.screen===id){
+      Object.entries(d.values).forEach(([k,v])=>{
+        const el = qs(k); if(!el) return;
+        if(el.type==='checkbox') el.checked = v; else el.value = v;
+      });
+    }
+  }catch(e){}
+}
+window.addEventListener('beforeunload', ()=>{
+  const active = document.querySelector('.screen.active');
+  if(!active) return;
+  const vals = {};
+  active.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    vals[el.id] = el.type==='checkbox' ? el.checked : el.value;
+  });
+  sessionStorage.setItem(_pgKey+':draft', JSON.stringify({screen: active.id, values: vals}));
+});
+
 /* ===== التنقل مع دعم زر الرجوع في الجوال ===== */
 let _navStack = [];
 function show(id, push){
@@ -19,6 +48,7 @@ function show(id, push){
     _navStack.push(id);
     history.pushState({s:id}, '');
   }
+  sessionStorage.setItem(_pgKey+':screen', id);
 }
 window.addEventListener('popstate', ()=>{
   if(_navStack.length > 1){
@@ -27,6 +57,7 @@ window.addEventListener('popstate', ()=>{
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     qs(prev).classList.add('active');
     window.scrollTo(0,0);
+    sessionStorage.setItem(_pgKey+':screen', prev);
     if(window._afterNav) window._afterNav(prev);
   } else {
     history.pushState({s:_navStack[0]}, '');

@@ -43,6 +43,19 @@ window.addEventListener('beforeunload', ()=>{
   sessionStorage.setItem('coDraft', JSON.stringify({screen: active.id, values: vals}));
 });
 
+// استعادة البيانات المعبّأة في الصفحة المحفوظة
+function _restoreCoDraft(id){
+  try{
+    const d = JSON.parse(SAVED_DRAFT||'null');
+    if(d && d.screen===id){
+      Object.entries(d.values).forEach(([k,v])=>{
+        const el = qs(k); if(!el) return;
+        if(el.type==='checkbox') el.checked = v; else el.value = v;
+      });
+    }
+  }catch(e){}
+}
+
 // بعد تسجيل الدخول: ارجع لنفس الصفحة التي كنت عليها قبل التحديث
 function restoreSession(){
   const saved = SAVED_SCREEN;
@@ -51,7 +64,7 @@ function restoreSession(){
   const needPerm = { 's-cal':'cal', 's-bookings':'bookings', 's-qr':'qr' };
   if(isEmployee && needPerm[saved] && !perms[needPerm[saved]]) return;
   const openers = { 's-cal':openCal, 's-bookings':openBookings, 's-emps':openEmps, 's-settings':openSettings, 's-qr':openQR };
-  if(openers[saved]){ openers[saved](); return; }
+  if(openers[saved]){ openers[saved](); _restoreCoDraft(saved); return; }
   if(saved==='s-addtrip'){
     show('s-addtrip');
     try{
@@ -242,18 +255,18 @@ const icon = t => TYPE_ICON[t] || '🚌';
 
 function tripRow(x){
   const left = (x.seats||0)-(x.booked||0);
-  const ownerBtns = isEmployee ? '' : `
-    <button class="icon-btn" onclick="openEditTrip('${x.id}')">✏️</button>
-    <button class="icon-btn" onclick="toggleTrip('${x.id}',${!x.active})">${x.active?'⏸️':'▶️'}</button>
-    <button class="icon-btn" onclick="delTrip('${x.id}')">🗑️</button>`;
-  return `<div class="card trip">
-    <div class="thumb">${icon(x.type)}</div>
-    <div style="flex:1">
-      <h3>${esc(x.name)}</h3>
-      <div class="meta">${x.recurring?'يوميًا':esc(x.date)} • ${esc(x.time)}${x.busNumber?' • 🚌 '+esc(x.busNumber):''} • متبقي ${left}/${x.seats}</div>
+  return `<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h3 style="font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${icon(x.type)} ${esc(x.name)}</h3>
+      <span class="badge ${x.active?'b-green':'b-red'}" style="flex-shrink:0">${x.active?'متاحة':'موقوفة'}</span>
     </div>
-    <span class="badge ${x.active?'b-green':'b-red'}">${x.active?'متاحة':'موقوفة'}</span>
-    ${ownerBtns}
+    <div class="meta" style="margin-top:8px">📅 ${x.recurring?'يوميًا':esc(x.date)} • 🕖 ${esc(x.time)}</div>
+    <div class="meta">${x.busNumber?'🚌 '+esc(x.busNumber)+' • ':''}💺 متبقي ${left}/${x.seats}</div>
+    ${isEmployee ? '' : `<div class="bk-actions">
+      <button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="openEditTrip('${x.id}')">✏️ تعديل</button>
+      <button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="toggleTrip('${x.id}',${!x.active})">${x.active?'⏸️ إيقاف':'▶️ تفعيل'}</button>
+      <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="delTrip('${x.id}')">🗑️ حذف</button>
+    </div>`}
   </div>`;
 }
 
@@ -459,16 +472,22 @@ async function openEmps(){
   const snap = await db.collection('employees').where('companyId','==',company.id).get();
   qs('empsList').innerHTML = snap.empty ? '<div class="empty">لا يوجد موظفون بعد</div>'
     : snap.docs.map(d=>{ const e=d.data(); return `
-    <div class="lrow" style="${e.active?'':'opacity:.55'}">
-      <div class="ava">${esc(e.name).charAt(0)}</div>
-      <div class="grow"><h4>${esc(e.name)}</h4>
-        <p dir="ltr" style="text-align:right">${esc(e.email)}</p>
-        <p dir="ltr" style="text-align:right">📱 ${esc(e.whatsapp||'—')}</p>
-        <p>${e.active?'نشط':'موقوف'}</p></div>
-      <button class="icon-btn" title="تعديل" onclick='editEmp("${d.id}", ${JSON.stringify(e).replace(/'/g,"&#39;")})'>✏️</button>
-      <button class="icon-btn" title="إعادة تعيين كلمة المرور" onclick="empResetPass('${esc(e.email)}')">🔑</button>
-      <button class="icon-btn" onclick="toggleEmp('${d.id}',${!e.active})">${e.active?'⏸️':'▶️'}</button>
-      <button class="icon-btn" onclick="delEmp('${d.id}')">🗑️</button>
+    <div class="lrow" style="flex-direction:column;align-items:stretch;${e.active?'':'opacity:.55'}">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="ava">${esc(e.name).charAt(0)}</div>
+        <div class="grow">
+          <h4>${esc(e.name)}</h4>
+          <p style="font-size:12px">${e.active?'🟢 نشط':'🔴 موقوف'}</p>
+        </div>
+      </div>
+      <p dir="ltr" style="text-align:right;font-size:12.5px;color:var(--muted);margin-top:8px">${esc(e.email)}</p>
+      <p dir="ltr" style="text-align:right;font-size:12.5px;color:var(--muted)">📱 ${esc(e.whatsapp||'—')}</p>
+      <div class="bk-actions">
+        <button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick='editEmp("${d.id}", ${JSON.stringify(e).replace(/'/g,"&#39;")})'>✏️ تعديل</button>
+        <button class="icon-btn" style="background:#e8ecf8;color:var(--navy2)" onclick="empResetPass('${esc(e.email)}')">🔑 كلمة المرور</button>
+        <button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="toggleEmp('${d.id}',${!e.active})">${e.active?'⏸️ إيقاف':'▶️ تفعيل'}</button>
+        <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="delEmp('${d.id}')">🗑️ حذف</button>
+      </div>
     </div>`; }).join('');
 }
 

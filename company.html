@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
-<div id="phone">
+<div id="phone" class="has-nav">
 
   <!-- شاشة تحميل -->
   <section class="screen active" id="s-loading">
@@ -90,7 +90,7 @@
         </div>
       </div>
     </div>
-    <div class="wrap" style="padding-top:70px">
+    <div class="wrap" style="padding-top:56px">
       <div id="trialNote"></div>
       <div class="stats" id="dashStats">
         <div class="stat"><div class="ic" style="background:var(--teal-l)">🗓️</div><b id="stTrips">0</b><span>إجمالي الرحلات</span></div>
@@ -108,13 +108,6 @@
       <h2 class="sec">الرحلات القادمة</h2>
       <div id="dashTrips"></div>
     </div>
-    <nav class="bnav" id="dashNav">
-      <button class="on" onclick="show('s-dash')"><span class="i">🏠</span>الرئيسية</button>
-      <button data-perm="cal" onclick="openCal()"><span class="i">🗓️</span>الجدول</button>
-      <button data-perm="bookings" onclick="openBookings()"><span class="i">🎫</span>الحجوزات</button>
-      <button data-owner onclick="openEmps()"><span class="i">👥</span>الموظفون</button>
-      <button data-owner onclick="openSettings()"><span class="i">⚙️</span>الإعدادات</button>
-    </nav>
   </section>
 
   <!-- جدول الرحلات -->
@@ -243,6 +236,13 @@
     </div>
   </section>
 
+    <nav class="bnav" id="dashNav" style="display:none">
+      <button class="on" onclick="show('s-dash')"><span class="i">🏠</span>الرئيسية</button>
+      <button data-perm="cal" onclick="openCal()"><span class="i">🗓️</span>الجدول</button>
+      <button data-perm="bookings" onclick="openBookings()"><span class="i">🎫</span>الحجوزات</button>
+      <button data-owner onclick="openEmps()"><span class="i">👥</span>الموظفون</button>
+      <button data-owner onclick="openSettings()"><span class="i">⚙️</span>الإعدادات</button>
+    </nav>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -250,8 +250,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=6"></script>
-<script src="js/common.js?v=6"></script>
-<script src="js/company.js?v=6"></script>
+<script src="js/firebase-config.js?v=7"></script>
+<script src="js/common.js?v=7"></script>
+<script src="js/company.js?v=7"></script>
 </body>
 </html>

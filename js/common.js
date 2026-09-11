@@ -27,6 +27,7 @@ window.addEventListener('popstate', ()=>{
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     qs(prev).classList.add('active');
     window.scrollTo(0,0);
+    if(window._afterNav) window._afterNav(prev);
   } else {
     history.pushState({s:_navStack[0]}, '');
   }

@@ -16,6 +16,56 @@ const AR_ERR = {
 const aerr = e => AR_ERR[e.code] || 'حدث خطأ: ' + e.code;
 function err(id,msg){ const el=qs(id); el.textContent=msg; el.classList.add('show'); }
 
+/* ===== شريط سفلي ثابت + استعادة الجلسة بعد التحديث ===== */
+const AUTH_SCREENS = ['s-loading','s-login','s-register','s-forgot','s-pending'];
+// تُقرأ عند تحميل الصفحة قبل أن يغيّرها الدخول التلقائي
+const SAVED_SCREEN = sessionStorage.getItem('coScreen');
+const SAVED_DRAFT = sessionStorage.getItem('coDraft');
+const NAVMAP = {'s-dash':0,'s-cal':1,'s-bookings':2,'s-emps':3,'s-settings':4};
+function _syncNav(id){
+  const nav = qs('dashNav'); if(!nav) return;
+  nav.style.display = AUTH_SCREENS.includes(id) ? 'none' : 'flex';
+  nav.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on', NAVMAP[id]===i));
+  sessionStorage.setItem('coScreen', id);
+}
+window._afterNav = _syncNav;
+const _show0 = show;
+show = function(id, push){ _show0(id, push); _syncNav(id); };
+
+// حفظ البيانات المعبّأة قبل التحديث حتى لا تضيع
+window.addEventListener('beforeunload', ()=>{
+  const active = document.querySelector('.screen.active');
+  if(!active) return;
+  const vals = {};
+  active.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    vals[el.id] = el.type==='checkbox' ? el.checked : el.value;
+  });
+  sessionStorage.setItem('coDraft', JSON.stringify({screen: active.id, values: vals}));
+});
+
+// بعد تسجيل الدخول: ارجع لنفس الصفحة التي كنت عليها قبل التحديث
+function restoreSession(){
+  const saved = SAVED_SCREEN;
+  if(!saved || saved==='s-dash' || AUTH_SCREENS.includes(saved)) return;
+  if(isEmployee && (saved==='s-emps' || saved==='s-settings')) return;
+  const needPerm = { 's-cal':'cal', 's-bookings':'bookings', 's-qr':'qr' };
+  if(isEmployee && needPerm[saved] && !perms[needPerm[saved]]) return;
+  const openers = { 's-cal':openCal, 's-bookings':openBookings, 's-emps':openEmps, 's-settings':openSettings, 's-qr':openQR };
+  if(openers[saved]){ openers[saved](); return; }
+  if(saved==='s-addtrip'){
+    show('s-addtrip');
+    try{
+      const draft = JSON.parse(SAVED_DRAFT||'null');
+      if(draft && draft.screen==='s-addtrip'){
+        Object.entries(draft.values).forEach(([id,v])=>{
+          const el = qs(id); if(!el) return;
+          if(el.type==='checkbox') el.checked = v; else el.value = v;
+        });
+      }
+    }catch(e){}
+  }
+}
+
 /* ===== المصادقة: مالك أو موظف ===== */
 auth.onAuthStateChanged(async user => {
   if(!user){ currentUser=null; history.replaceState({s:'s-login'},''); _navStack=['s-login']; show('s-login', false); return; }
@@ -56,6 +106,7 @@ auth.onAuthStateChanged(async user => {
       show('s-pending', false); return;
     }
     await enterDashboard();
+    restoreSession();
   }catch(e){ console.error(e); toast('خطأ: ' + (e.message||e.code||e)); show('s-login', false); }
 });
 
@@ -178,6 +229,10 @@ async function purgeExpiredTrips(){
       const bs = await db.collection('bookings').where('tripId','==',d.id).get();
       bs.docs.forEach(x=>batch.delete(x.ref));
     }
+    // الرحلة اليومية: مقاعدها ترجع كاملة كل يوم جديد
+    if(t.recurring && t.lastReset !== today){
+      batch.update(d.ref, { booked: 0, lastReset: today }); dirty = true;
+    }
   }
   if(dirty) await batch.commit();
 }
@@ -254,12 +309,16 @@ async function saveTrip(){
     } else {
       await db.collection('trips').add({
         companyId: company.id, name, from, to, busNumber: bus, type, date, time,
-        seats, price, recurring, booked: 0, active: true,
+        seats, price, recurring, booked: 0, active: true, lastReset: new Date().toISOString().slice(0,10),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       toast('تمت إضافة الرحلة ✔');
     }
-    await refreshTrips(); openCal();
+    await refreshTrips();
+    qs('stTrips').textContent = myTrips.length;
+    renderUpcoming();
+    sessionStorage.removeItem('coDraft');
+    openCal();
   }catch(e){ console.error(e); err('tripErr','تعذر الحفظ — حاول مجددًا'); }
   btn.disabled=false; btn.textContent='حفظ الرحلة';
 }

@@ -1,10 +1,17 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // وصولات التحويل: الرفع للجميع (العميل يرفع وصله)، القراءة للجميع برابط مباشر
+    // وصولات التحويل: العميل يرفع وصله (صورة حتى 5MB)
     match /receipts/{companyId}/{file} {
       allow read: if true;
       allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    // شعار وغلاف الشركة: موظفو الشركة فقط
+    match /branding/{companyId}/{file} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
   }

@@ -18,28 +18,33 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin()
+        || (isStaff(resource.data.companyId)));
       allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isStaff(resource.data.companyId) && resource.data.role == 'employee'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','whatsapp','perms','active']));
+      allow delete: if isAdmin();
     }
 
     match /companies/{id} {
       allow read: if true;
       allow create: if isSignedIn();
       allow update: if isAdmin()
-        || (isStaff(id) && request.resource.data.status == resource.data.status
-            && request.resource.data.subscriptionEnd == resource.data.subscriptionEnd
-            && request.resource.data.trialEndsAt == resource.data.trialEndsAt
-            && request.resource.data.slug == resource.data.slug
-            && request.resource.data.ownerUid == resource.data.ownerUid);
+        || (isStaff(id) && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['name','desc','transferPhone','paymentMethods','logoUrl','coverUrl','buses']));
       allow delete: if isAdmin();
     }
 
     match /trips/{id} {
       allow read: if true;
-      allow create, update, delete: if isAdmin()
+      allow create, delete: if isAdmin()
         || isStaff(request.resource.data.companyId)
         || (resource != null && isStaff(resource.data.companyId));
+      allow update: if isAdmin()
+        || (resource != null && isStaff(resource.data.companyId))
+        // العميل: تحديث عداد المقاعد فقط
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['booked']);
     }
 
     match /bookings/{id} {

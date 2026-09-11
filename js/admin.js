@@ -77,7 +77,15 @@ function renderCompanies(){
 }
 
 async function setStatus(id, status){
-  await db.collection('companies').doc(id).update({status});
+  const data = { status };
+  if(status === 'suspended'){
+    const reason = prompt('اكتب سبب الإيقاف (سيظهر لصاحب الشركة):');
+    if(reason === null) return; // ألغى
+    data.suspensionReason = reason.trim() || 'لم يُذكر سبب';
+  } else if(status === 'active'){
+    data.suspensionReason = firebase.firestore.FieldValue.delete();
+  }
+  await db.collection('companies').doc(id).update(data);
   toast(status==='active'?'تم تفعيل الشركة ✔ — رابطها وباركودها يعملان الآن':'تم إيقاف الشركة');
   await loadAdmin();
 }

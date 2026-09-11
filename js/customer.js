@@ -48,11 +48,12 @@ function renderTrips(){
       <div class="thumb">${icon(t.type)}</div>
       <div style="flex:1">
         <h3>${esc(t.name)}</h3>
-        <div class="meta">${esc(t.from)} ← ${esc(t.to)} • ${t.recurring?'يوميًا':esc(t.date)} ${esc(t.time)}</div>
+        <div class="route">${esc(t.from)} ← ${esc(t.to)}</div>
+        <div class="meta">${t.recurring?'يوميًا':esc(t.date)} ${esc(t.time)}${t.busNumber?' • 🚌 '+esc(t.busNumber):''}</div>
         <span class="badge ${left>5?'b-green':left>0?'b-gold':'b-red'}" style="margin-top:5px">
           ${left>0 ? left+' مقعد متاح' : 'مكتملة'}</span>
       </div>
-      <div class="price">${t.price} ر.س</div>
+      <div class="price">${t.price} ر.ع</div>
     </div>`;
   }).join('') : '<div class="empty">لا توجد رحلات متاحة حاليًا</div>';
 }
@@ -71,11 +72,12 @@ function openTrip(id){
       <div style="height:140px;background:linear-gradient(140deg,var(--teal),var(--navy2));display:flex;align-items:center;justify-content:center;font-size:60px">${icon(t.type)}</div>
       <div style="padding:16px">
         <h3 style="font-weight:900;font-size:18px">${esc(t.name)}</h3>
-        <p class="muted">${esc(t.from)} ← ${esc(t.to)}</p>
+        <p class="route" style="font-size:15px">${esc(t.from)} ← ${esc(t.to)}</p>
+        ${t.busNumber?`<p class="muted">🚌 رقم الباص: <b>${esc(t.busNumber)}</b></p>`:''}
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${t.recurring?'رحلة يومية':fmtDate(new Date(t.date+'T00:00'))}</b></div>
         <div class="tline"><span class="muted">🕖 وقت الانطلاق</span><b>${esc(t.time)}</b></div>
         <div class="tline"><span class="muted">💺 المقاعد المتاحة</span><b>${left} مقعد</b></div>
-        <div class="tline" style="border:none"><span class="muted">💰 السعر</span><b class="price">${t.price} ر.س</b></div>
+        <div class="tline" style="border:none"><span class="muted">💰 السعر</span><b class="price">${t.price} ر.ع</b></div>
       </div>
     </div>
     <button class="btn btn-primary" ${left<=0?'disabled':''} onclick="show('s-book')">${left>0?'احجز الآن':'اكتملت المقاعد'}</button>`;
@@ -98,18 +100,20 @@ function submitBooking(){
 
 function renderPayment(){
   const t = currentTrip;
-  const pm = company.paymentMethods || { cash:true, visa:false, transfer:false };
+  // تعرض فقط طرق الدفع التي فعّلتها الشركة من إعداداتها
+  const pm = company.paymentMethods || {};
   const total = t.price * pendingBooking.seats;
   let opts = '';
   if(pm.cash)     opts += payBtn('cash', '💵', 'كاش', 'ادفع عند الصعود للحافلة');
   if(pm.visa)     opts += payBtn('visa', '💳', 'فيزا / بطاقة', 'ادفع إلكترونيًا الآن');
   if(pm.transfer) opts += payBtn('transfer', '🏦', 'تحويل بنكي', 'حوّل وأرفق صورة الوصل');
-  if(!opts) opts = '<div class="empty">لم تفعّل الشركة أي طريقة دفع بعد</div>';
+  if(!opts) opts = `<div class="notice" style="margin-bottom:12px">لم تفعّل الشركة طرق دفع إلكترونية — الدفع عند الصعود</div>
+    <button class="btn btn-primary" onclick="finalizeBooking('cash','confirmed')">تأكيد الحجز</button>`;
   qs('payBox').innerHTML = `
     <div class="card center">
       <h3 style="font-weight:900">${esc(t.name)}</h3>
-      <p class="muted">${pendingBooking.seats} مقعد × ${t.price} ر.س</p>
-      <div class="price" style="font-size:26px;margin-top:6px">${total} ر.س</div>
+      <p class="muted">${pendingBooking.seats} مقعد × ${t.price} ر.ع</p>
+      <div class="price" style="font-size:26px;margin-top:6px">${total} ر.ع</div>
     </div>
     <h2 class="sec">اختر طريقة الدفع</h2>
     ${opts}`;

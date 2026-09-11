@@ -33,15 +33,21 @@ async function init(){
   }catch(e){ console.error(e); qs('errMsg').textContent='تعذر الاتصال، تحقق من الإنترنت'; show('s-404', false); }
 }
 
-async function loadTrips(){
-  const today = new Date().toISOString().slice(0,10);
-  const snap = await db.collection('trips')
+function loadTrips(){
+  // تحديث لحظي: أي رحلة جديدة أو حجز يظهر فورًا بدون تحديث الصفحة
+  db.collection('trips')
     .where('companyId','==',company.id)
-    .where('active','==',true).get();
-  trips = snap.docs.map(d=>({id:d.id,...d.data()}))
-    .filter(t => t.recurring || t.date >= today)
-    .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
-  renderTrips();
+    .where('active','==',true)
+    .onSnapshot(snap=>{
+      const today = new Date().toISOString().slice(0,10);
+      trips = snap.docs.map(d=>({id:d.id,...d.data()}))
+        .filter(t => t.recurring || t.date >= today)
+        .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+      renderTrips();
+    }, e=>{
+      console.error(e);
+      qs('tripsList').innerHTML = '<div class="empty">تعذر تحميل الرحلات — حدّث الصفحة</div>';
+    });
 }
 
 function seatsLeft(t){ return (t.seats||0) - (t.booked||0); }
@@ -230,27 +236,31 @@ function goHome(){
 }
 
 /* ===== حجوزاتي + الإلغاء ===== */
-let lastFindWa = '';
-async function findBookings(){
+let lastFindWa = '', bookingsUnsub = null;
+function findBookings(){
   const wa = qs('findWa').value.trim();
   if(!wa){ toast('أدخل رقم الواتساب'); return; }
   lastFindWa = wa;
   const box = qs('myBookings');
   box.innerHTML = '<div class="empty"><span class="spin"></span> جارِ البحث...</div>';
-  const snap = await db.collection('bookings').where('whatsapp','==',wa).get();
-  const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
-    .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-  box.innerHTML = rows.length ? rows.map(b=>{
-    const [cls,label] = statusLabel(b.status);
-    return `<div class="card trip" onclick='showTicket(${JSON.stringify({...b, createdAt:null})}, "${b.id}", "${b.tripId}")'>
-      <div class="thumb">🎫</div>
-      <div style="flex:1">
-        <h3>${esc(b.tripName)}</h3>
-        <div class="meta">${esc(b.date)} • ${esc(b.time)} • ${b.seats} مقعد</div>
-        <span class="badge ${cls}" style="margin-top:5px">${label}</span>
-      </div>
-    </div>`;
-  }).join('') : '<div class="empty">لا توجد حجوزات على هذا الرقم</div>';
+  if(bookingsUnsub) bookingsUnsub();
+  // تحديث لحظي: الإلغاء أو التأكيد يظهر فورًا
+  bookingsUnsub = db.collection('bookings').where('whatsapp','==',wa)
+    .onSnapshot(snap=>{
+      const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
+        .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      box.innerHTML = rows.length ? rows.map(b=>{
+        const [cls,label] = statusLabel(b.status);
+        return `<div class="card trip" onclick='showTicket(${JSON.stringify({...b, createdAt:null})}, "${b.id}", "${b.tripId}")'>
+          <div class="thumb">🎫</div>
+          <div style="flex:1">
+            <h3>${esc(b.tripName)}</h3>
+            <div class="meta">${esc(b.date)} • ${esc(b.time)} • ${b.seats} مقعد</div>
+            <span class="badge ${cls}" style="margin-top:5px">${label}</span>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty">لا توجد حجوزات على هذا الرقم</div>';
+    }, e=>{ console.error(e); box.innerHTML = '<div class="empty">تعذر التحميل — حاول مجددًا</div>'; });
 }
 
 function cancelMyBooking(id, tripId, seats){

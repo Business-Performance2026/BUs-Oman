@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رحلاتك — حجز رحلة</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 <div id="phone">
@@ -13,9 +13,15 @@
   <!-- الرئيسية: رحلات الشركة -->
   <section class="screen active" id="s-home">
     <div class="appbar" style="padding-bottom:26px">
-      <h1 id="coName" style="text-align:right">...</h1>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="coLogoC" style="width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.18);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🚌</div>
+        <div style="flex:1;min-width:0">
+          <h1 id="coName" style="text-align:right">...</h1>
+          <p id="coCr" style="font-size:12px;opacity:.85;text-align:right"></p>
+          <p id="coSub" style="font-size:12.5px;opacity:.8;margin-top:2px;text-align:right"></p>
+        </div>
+      </div>
       <button class="side" onclick="show('s-find')">حجوزاتي 🎫</button>
-      <p id="coSub" style="font-size:12.5px;opacity:.8;margin-top:4px;text-align:right"></p>
     </div>
     <div class="wrap">
       <div class="banner"><h3>رحلات مريحة وآمنة</h3><p>احجز مقعدك الآن بثوانٍ</p></div>
@@ -92,8 +98,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=4"></script>
-<script src="js/common.js?v=4"></script>
-<script src="js/customer.js?v=4"></script>
+<script src="js/firebase-config.js?v=5"></script>
+<script src="js/common.js?v=5"></script>
+<script src="js/customer.js?v=5"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // بوابة الشركات
 let company = null, myTrips = [], calCursor = new Date(), selDate = null;
-let isEmployee = false, perms = null, editTripId = null, currentUser = null;
+let isEmployee = false, perms = null, editTripId = null, currentUser = null, myLink = '';
 
 const FULL_PERMS = { qr:true, trips:true, cal:true, bookings:true };
 

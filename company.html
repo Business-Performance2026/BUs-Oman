@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 <div id="phone">
@@ -235,10 +235,7 @@
       <div class="qr-box">
         <div class="qr-holder" id="coQr"></div>
         <h3 style="font-weight:900;margin-top:14px">رابط شركتك</h3>
-        <div class="card" style="background:#f4f7f9;box-shadow:none;margin:12px 0">
-          <span dir="ltr" id="coLink" style="font-size:13px;font-weight:700;color:var(--teal);word-break:break-all"></span>
-        </div>
-        <div class="row">
+        <div class="row" style="margin-top:12px">
           <button class="btn btn-teal" onclick="copyLink()">📋 نسخ الرابط</button>
           <button class="btn btn-ghost" onclick="downloadQR('coQr','barcode.png')">⬇️ تحميل الباركود</button>
         </div>
@@ -254,8 +251,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=4"></script>
-<script src="js/common.js?v=4"></script>
-<script src="js/company.js?v=4"></script>
+<script src="js/firebase-config.js?v=5"></script>
+<script src="js/common.js?v=5"></script>
+<script src="js/company.js?v=5"></script>
 </body>
 </html>

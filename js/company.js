@@ -1,6 +1,6 @@
 // بوابة الشركات
 let company = null, myTrips = [], calCursor = new Date(), selDate = null;
-let isEmployee = false, perms = null, editTripId = null;
+let isEmployee = false, perms = null, editTripId = null, currentUser = null;
 
 const FULL_PERMS = { qr:true, trips:true, cal:true, bookings:true };
 
@@ -18,7 +18,8 @@ function err(id,msg){ const el=qs(id); el.textContent=msg; el.classList.add('sho
 
 /* ===== المصادقة: مالك أو موظف ===== */
 auth.onAuthStateChanged(async user => {
-  if(!user){ history.replaceState({s:'s-login'},''); _navStack=['s-login']; show('s-login', false); return; }
+  if(!user){ currentUser=null; history.replaceState({s:'s-login'},''); _navStack=['s-login']; show('s-login', false); return; }
+  currentUser = user;
   try{
     let snap = await db.collection('companies').where('ownerUid','==',user.uid).limit(1).get();
     if(!snap.empty){
@@ -54,8 +55,8 @@ auth.onAuthStateChanged(async user => {
       qs('pendMsg').innerHTML='لتجديد الاشتراك ومواصلة استقبال الحجوزات، تواصل مع إدارة المنصة.';
       show('s-pending', false); return;
     }
-    enterDashboard();
-  }catch(e){ console.error(e); show('s-login', false); }
+    await enterDashboard();
+  }catch(e){ console.error(e); toast('خطأ: ' + (e.message||e.code||e)); show('s-login', false); }
 });
 
 async function doLogin(){
@@ -110,6 +111,7 @@ async function doForgot(){
 /* ===== لوحة التحكم ===== */
 async function enterDashboard(){
   history.replaceState({s:'s-dash'},''); _navStack=['s-dash'];
+
   // الغلاف والشعار
   if(company.coverUrl) qs('coCover').style.backgroundImage = `url('${company.coverUrl}')`;
   qs('coLogo').innerHTML = company.logoUrl

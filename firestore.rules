@@ -20,7 +20,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin()
         || (isStaff(resource.data.companyId)));
-      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.role in ['company','employee']; // لا يمكن لأحد تعيين نفسه admin
       allow update: if isAdmin()
         || (isStaff(resource.data.companyId) && resource.data.role == 'employee'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','whatsapp','perms','active']));

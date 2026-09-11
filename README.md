@@ -16,12 +16,14 @@
 - من القائمة: **Build → Firestore Database → Create database**
 - اختر **Start in production mode** وأقرب منطقة
 
-### 2) نشر قواعد الأمان
-من جهازك داخل مجلد المشروع:
+### 2) نشر قواعد الأمان (Firestore + Storage)
 ```bash
-firebase deploy --only firestore:rules
+firebase deploy --only firestore:rules,storage
 ```
-(أو انسخ محتوى `firestore.rules` والصقه في تبويب **Rules** داخل Firestore ثم اضغط Publish)
+⚠️ فعّل **Storage** أولًا من: Build → Storage → Get started (ضروري لرفع وصولات التحويل البنكي)
+
+### 2ب) دخول الموظفين
+الموظف الذي تضيفه الشركة يدخل من **نفس صفحة** `company.html` بإيميله وكلمة مروره — يدخل لوحة شركته تلقائيًا.
 
 ### 3) إنشاء حساب الأدمن (أنت)
 1. في Firebase Console: **Authentication → Users → Add user**

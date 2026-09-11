@@ -21,8 +21,6 @@
         <h2 style="font-weight:900;font-size:19px">حجوزات النقل في مكان واحد</h2>
         <p class="muted" style="margin:8px 0 20px">امسح الباركود على الباص أو افتح رابط الشركة واحجز مقعدك بثوانٍ</p>
         <button class="btn btn-primary" onclick="location.href='company.html'">🏢 دخول الشركات</button>
-        <div style="height:10px"></div>
-        <button class="btn btn-ghost" onclick="location.href='admin.html'">🛡️ دخول الإدارة</button>
         <p class="muted" style="margin-top:16px;font-size:12.5px">عميل؟ افتح رابط الشركة أو امسح الباركود المثبت على الباص</p>
       </div>
     </div>
@@ -30,7 +28,7 @@
 
 </div>
 <script>
-// إذا فتح الصفحة برابط شركة، حوّله لصفحة العميل
+// رابط شركة؟ حوّل لصفحة العميل
 if (new URLSearchParams(location.search).get('c')) {
   location.replace('customer.html' + location.search);
 }

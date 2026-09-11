@@ -18,7 +18,7 @@
       <p id="coSub" style="font-size:12.5px;opacity:.8;margin-top:4px;text-align:right"></p>
     </div>
     <div class="wrap">
-      <div class="banner"><h3>رحلات مريحة وآمنة</h3><p>احجز مقعدك الآن وادفع عند الصعود</p></div>
+      <div class="banner"><h3>رحلات مريحة وآمنة</h3><p>احجز مقعدك الآن بثوانٍ</p></div>
       <div class="chips" id="typeChips">
         <button class="chip on" data-t="">الكل</button>
         <button class="chip" data-t="جامعات وكليات">الجامعات والكليات</button>
@@ -32,13 +32,13 @@
 
   <!-- تفاصيل الرحلة -->
   <section class="screen" id="s-trip">
-    <div class="appbar"><button class="back" onclick="show('s-home')">→</button><h1>تفاصيل الرحلة</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>تفاصيل الرحلة</h1></div>
     <div class="wrap" id="tripDetail"></div>
   </section>
 
   <!-- نموذج الحجز -->
   <section class="screen" id="s-book">
-    <div class="appbar"><button class="back" onclick="show('s-trip')">→</button><h1>إتمام الحجز</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>إتمام الحجز</h1></div>
     <div class="wrap">
       <div class="card">
         <h3 style="font-weight:900;margin-bottom:14px">بيانات المسافر</h3>
@@ -50,8 +50,14 @@
           <select id="bSeats"><option>1</option><option>2</option><option>3</option><option>4</option></select>
         </div>
       </div>
-      <button class="btn btn-primary" id="bookBtn" onclick="submitBooking()">تأكيد الحجز</button>
+      <button class="btn btn-primary" id="bookBtn" onclick="submitBooking()">متابعة للدفع</button>
     </div>
+  </section>
+
+  <!-- طريقة الدفع -->
+  <section class="screen" id="s-pay">
+    <div class="appbar"><h1>طريقة الدفع</h1></div>
+    <div class="wrap" id="payBox"></div>
   </section>
 
   <!-- التذكرة -->
@@ -60,9 +66,9 @@
     <div class="wrap" id="ticketBox"></div>
   </section>
 
-  <!-- البحث عن حجوزاتي بالواتساب -->
+  <!-- حجوزاتي -->
   <section class="screen" id="s-find">
-    <div class="appbar"><button class="back" onclick="show('s-home')">→</button><h1>حجوزاتي</h1></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>حجوزاتي</h1></div>
     <div class="wrap">
       <div class="card">
         <p class="muted" style="margin-bottom:12px">أدخل رقم الواتساب الذي حجزت به لعرض تذاكرك</p>
@@ -73,11 +79,10 @@
     </div>
   </section>
 
-  <!-- شركة غير موجودة -->
+  <!-- خطأ / شركة غير متاحة -->
   <section class="screen" id="s-404">
     <div class="wrap" style="padding-top:120px">
-      <div class="empty">😕<br><br>الرابط غير صحيح أو الشركة غير مفعّلة بعد<br><br>
-      <button class="btn btn-primary" onclick="location.href='index.html'">العودة للرئيسية</button></div>
+      <div class="empty">😕<br><br><span id="errMsg">الرابط غير صحيح أو الشركة غير متاحة حاليًا</span></div>
     </div>
   </section>
 
@@ -86,6 +91,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/common.js"></script>

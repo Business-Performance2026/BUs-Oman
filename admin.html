@@ -10,19 +10,26 @@
 <body>
 <div id="phone">
 
+  <!-- شاشة تحميل -->
+  <section class="screen active" id="s-loading">
+    <div class="wrap" style="padding-top:180px;text-align:center">
+      <div class="logo" style="background:linear-gradient(140deg,#2a1a4a,#123a63)">🛡️</div>
+      <div style="margin-top:16px"><span class="spin"></span></div>
+    </div>
+  </section>
+
   <!-- دخول الأدمن -->
-  <section class="screen active" id="s-login">
+  <section class="screen" id="s-login">
     <div class="appbar purple"><h1>🛡️ دخول الإدارة</h1></div>
     <div class="wrap">
       <div class="error" id="loginErr"></div>
       <div class="field"><label>البريد الإلكتروني</label><input id="aEmail" type="email" dir="ltr" style="text-align:right" placeholder="admin@mail.com"></div>
       <div class="field"><label>كلمة المرور</label><input id="aPass" type="password" placeholder="••••••••"></div>
       <button class="btn btn-primary" onclick="adminLogin()">دخول</button>
-      <p class="center" style="margin-top:14px"><button class="link" onclick="location.href='index.html'">← العودة للرئيسية</button></p>
     </div>
   </section>
 
-  <!-- لوحة الأدمن -->
+  <!-- الرئيسية: التحليلات -->
   <section class="screen" id="s-dash">
     <div class="appbar purple"><h1>لوحة تحكم الأدمن</h1><button class="side" onclick="logout()">خروج ⎋</button></div>
     <div class="wrap">
@@ -30,26 +37,42 @@
         <div class="stat"><div class="ic" style="background:#ece6f8">🏢</div><b id="stCo">0</b><span>عدد الشركات</span></div>
         <div class="stat"><div class="ic" style="background:var(--teal-l)">🎫</div><b id="stBk">0</b><span>الحجوزات</span></div>
         <div class="stat"><div class="ic" style="background:#dff3e9">🚌</div><b id="stTr">0</b><span>إجمالي الرحلات</span></div>
-        <div class="stat"><div class="ic" style="background:#f7ecd4">⏳</div><b id="stPd">0</b><span>بانتظار التفعيل</span></div>
+        <div class="stat"><div class="ic" style="background:#f7ecd4">💰</div><b id="stRev">0</b><span>الإيرادات (ر.س)</span></div>
       </div>
-
+      <div class="stats" style="margin-top:12px">
+        <div class="stat" style="cursor:pointer" onclick="showOnly('active')"><div class="ic" style="background:#dff3e9">✅</div><b id="stAct">0</b><span>مفعّلة</span></div>
+        <div class="stat" style="cursor:pointer" onclick="showOnly('pending')"><div class="ic" style="background:#f7ecd4">⏳</div><b id="stPd">0</b><span>بانتظار التفعيل</span></div>
+      </div>
       <h2 class="sec">طلبات التفعيل <small onclick="loadAdmin()">↻ تحديث</small></h2>
       <div id="pendingList"></div>
+    </div>
+    <nav class="bnav">
+      <button class="on" onclick="loadAdmin()"><span class="i">📊</span>الرئيسية</button>
+      <button onclick="openCompanies()"><span class="i">🏢</span>الشركات</button>
+    </nav>
+  </section>
 
-      <h2 class="sec">جميع الشركات</h2>
+  <!-- صفحة الشركات -->
+  <section class="screen" id="s-companies">
+    <div class="appbar purple"><h1>الشركات</h1><button class="side" onclick="loadAdmin()">↻ تحديث</button></div>
+    <div class="wrap">
+      <div class="chips" id="statusChips">
+        <button class="chip on" data-s="">الكل</button>
+        <button class="chip" data-s="active">✅ المفعّلة</button>
+        <button class="chip" data-s="pending">⏳ المعلّقة</button>
+        <button class="chip" data-s="suspended">⛔ الموقوفة</button>
+      </div>
       <div id="companiesList"></div>
     </div>
     <nav class="bnav">
-      <button class="on" onclick="loadAdmin()"><span class="i">🏠</span>الرئيسية</button>
-      <button onclick="showOnly('active')"><span class="i">🏢</span>المفعّلة</button>
-      <button onclick="showOnly('pending')"><span class="i">⏳</span>المعلّقة</button>
-      <button onclick="showOnly('suspended')"><span class="i">⛔</span>الموقوفة</button>
+      <button onclick="loadAdmin()"><span class="i">📊</span>الرئيسية</button>
+      <button class="on"><span class="i">🏢</span>الشركات</button>
     </nav>
   </section>
 
   <!-- تفاصيل شركة -->
   <section class="screen" id="s-co">
-    <div class="appbar purple"><button class="back" onclick="show('s-dash')">→</button><h1>تفاصيل الشركة</h1></div>
+    <div class="appbar purple"><button class="back" onclick="goBack()">→</button><h1>تفاصيل الشركة</h1></div>
     <div class="wrap" id="coDetail"></div>
   </section>
 

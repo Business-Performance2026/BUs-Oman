@@ -276,6 +276,7 @@ function tripRow(x){
       <button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="openEditTrip('${x.id}')">✏️ تعديل</button>
       <button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="toggleTrip('${x.id}',${!x.active})">${x.active?'⏸️ إيقاف':'▶️ تفعيل'}</button>
       <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="delTrip('${x.id}')">🗑️ حذف</button>
+      <button class="icon-btn" style="background:#e0f2fe;color:#0369a1" onclick="shareTripCo('${x.id}')">📤 مشاركة</button>
     </div>`}
     <div class="bk-actions" style="margin-top:8px">
       <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':'الحافلة الآن في: '+esc(tripStops(x)[x.currentStop]||'')}</button>
@@ -470,6 +471,56 @@ function waMessage(b){
 نتشرف بخدمتك 🌹`);
 }
 
+/* رسالة واتساب جاهزة لإشعار العميل بالإلغاء */
+function waCancelMessage(b){
+  return encodeURIComponent(
+`⛔ إشعار إلغاء حجز — ${company.name}
+━━━━━━━━━━━━━━━
+عزيزنا ${b.name}، نعتذر منك 🌹
+تم إلغاء حجزك في الرحلة التالية:
+🚌 الرحلة: ${b.tripName}
+📅 التاريخ: ${b.date}
+🕖 الوقت: ${b.time}
+🔖 رقم التذكرة: ${b.code}
+📝 سبب الإلغاء: ${b.cancelReason||'—'}
+━━━━━━━━━━━━━━━
+🔗 يمكنك حجز رحلة أخرى من هنا:
+${companyLink(company.slug)}
+
+نعتذر منك مرة أخرى 🌹`);
+}
+
+/* 4) تصدير الحجوزات إلى Excel (CSV يدعم العربية) */
+function exportBookings(){
+  const rows = window._bkRows || [];
+  if(!rows.length){ toast('لا توجد حجوزات للتصدير'); return; }
+  const head = ['الاسم','الواتساب','الرحلة','التاريخ','الوقت','المقاعد','محطة الصعود','طريقة الدفع','الحالة','رقم التذكرة'];
+  const stMap = { confirmed:'مؤكد', cancelled:'ملغي', pending_payment:'بانتظار الدفع' };
+  const pmMap = { cash:'كاش', visa:'فيزا', transfer:'تحويل' };
+  const ec = v => '"' + String(v??'').replace(/"/g,'""') + '"';
+  const csv = '\ufeff' + [head, ...rows.map(b=>[
+    b.name, b.whatsapp, b.tripName, b.date, b.time, b.seats,
+    b.boardingStop||'', pmMap[b.paymentMethod]||b.paymentMethod||'', stMap[b.status]||b.status||'', b.code
+  ])].map(r=>r.map(ec).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = 'حجوزات-' + (company.name||'الشركة') + '.csv';
+  a.click();
+  toast('تم تصدير ' + rows.length + ' حجز 📊');
+}
+
+/* 7) مشاركة الرحلة برابط مباشر يفتحها للعميل */
+function shareTripCo(id){
+  const t = myTrips.find(x=>x.id===id); if(!t) return;
+  const url = companyLink(company.slug) + '&trip=' + id;
+  window.open('https://wa.me/?text=' + encodeURIComponent(
+`🚌 ${t.name} — ${company.name}
+📅 ${t.recurring?'رحلة يومية':t.date} 🕖 ${t.time}
+💰 السعر: ${t.price} ر.ع
+🔗 احجز مقعدك من هنا:
+${url}`), '_blank');
+}
+
 async function openBookings(){
   show('s-bookings');
   qs('bookingsList').innerHTML = '<div class="empty"><span class="spin"></span> جارِ التحميل...</div>';
@@ -478,6 +529,7 @@ async function openBookings(){
     .onSnapshot(snap=>{
       const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
         .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      window._bkRows = rows;
       qs('bookingsList').innerHTML = rows.length ? rows.map(b=>`
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;gap:12px;align-items:center">
@@ -500,7 +552,7 @@ async function openBookings(){
             <button class="icon-btn" style="background:#dff3e9;color:var(--green)" onclick="window.open('${waLink(b.whatsapp)}?text=${waMessage(b)}','_blank')">💬 واتساب</button>
             ${b.status!=='confirmed' && b.status!=='cancelled' ? `<button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="confirmPay('${b.id}')">✔️ تأكيد الدفع</button>` : ''}
             ${b.receiptUrl ? `<a class="icon-btn" style="background:#e8ecf8;color:var(--navy2);text-decoration:none;display:flex;align-items:center;justify-content:center" href="${b.receiptUrl}" target="_blank">📎 الوصل</a>` : ''}
-            ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats})">✖️ إلغاء</button>` : ''}
+            ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats})">✖️ إلغاء</button>` : `<button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="window.open('${waLink(b.whatsapp)}?text=${waCancelMessage(b)}','_blank')">📩 إشعار العميل</button>`}
           </div>
         </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
     }, e=>{

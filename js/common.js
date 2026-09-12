@@ -9,6 +9,11 @@ function toast(msg){
   clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2500);
 }
 
+/* تسجيل Service Worker لتفعيل "إضافة إلى الشاشة الرئيسية" */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+
 /* ===== استمرارية الجلسة: الصفحة والبيانات تبقى بعد تحديث الصفحة ===== */
 const _pgKey = location.pathname.split('/').pop() || 'index.html';
 const SAVED_AT_LOAD = {

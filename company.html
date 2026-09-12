@@ -3,9 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d2440">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=15">
+<link rel="stylesheet" href="css/style.css?v=16">
 </head>
 <body>
 <div id="phone" class="has-nav">
@@ -178,7 +182,7 @@
 
   <!-- الحجوزات الواردة -->
   <section class="screen" id="s-bookings">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الحجوزات الواردة</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الحجوزات الواردة</h1><button class="side" onclick="exportBookings()" style="font-weight:800">📊 Excel</button></div>
     <div class="wrap">
       <p class="muted" style="margin-bottom:10px">اضغط على الحجز لمراسلة العميل واتساب برسالة جاهزة 💬</p>
       <div id="bookingsList"></div>
@@ -272,8 +276,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=15"></script>
-<script src="js/common.js?v=15"></script>
-<script src="js/company.js?v=15"></script>
+<script src="js/firebase-config.js?v=16"></script>
+<script src="js/common.js?v=16"></script>
+<script src="js/company.js?v=16"></script>
 </body>
 </html>

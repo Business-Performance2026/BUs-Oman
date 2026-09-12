@@ -3,9 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d2440">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>رحلاتك — لوحة الإدارة</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=15">
+<link rel="stylesheet" href="css/style.css?v=16">
 </head>
 <body>
 <div id="phone">
@@ -31,7 +35,11 @@
 
   <!-- الرئيسية: التحليلات -->
   <section class="screen" id="s-dash">
-    <div class="appbar purple"><h1>لوحة تحكم الأدمن</h1><button class="side" onclick="logout()">خروج ⎋</button></div>
+    <div class="appbar purple"><h1>لوحة تحكم الأدمن</h1>
+      <div style="display:flex;gap:8px">
+        <button class="side" onclick="openCompanies()" style="position:relative">🔔<span id="admBell" class="bell-badge" style="display:none">0</span></button>
+        <button class="side" onclick="logout()">خروج ⎋</button>
+      </div></div>
     <div class="wrap">
       <div class="stats">
         <div class="stat"><div class="ic" style="background:#ece6f8">🏢</div><b id="stCo">0</b><span>عدد الشركات</span></div>
@@ -82,8 +90,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=15"></script>
-<script src="js/common.js?v=15"></script>
-<script src="js/admin.js?v=15"></script>
+<script src="js/firebase-config.js?v=16"></script>
+<script src="js/common.js?v=16"></script>
+<script src="js/admin.js?v=16"></script>
 </body>
 </html>

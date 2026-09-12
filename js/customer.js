@@ -53,6 +53,12 @@ function loadTrips(){
         .filter(t => t.recurring || t.date >= today)
         .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
       renderTrips();
+      // رابط مباشر لرحلة محددة (مشاركة واتساب): يفتحها مباشرة
+      if(!window._tripOpened && param('trip')){
+        window._tripOpened = true;
+        const tr = trips.find(x=>x.id===param('trip'));
+        if(tr){ window._restored = true; openTrip(tr.id); return; }
+      }
       if(!window._restored){ window._restored = true; restoreSession(); }
     }, e=>{
       console.error(e);
@@ -84,6 +90,18 @@ qs('typeChips').addEventListener('click', e=>{
   document.querySelectorAll('#typeChips .chip').forEach(c=>c.classList.remove('on'));
   b.classList.add('on'); currentType = b.dataset.t; renderTrips();
 });
+
+/* مشاركة الرحلة برابط مباشر */
+function shareTrip(id){
+  const t = trips.find(x=>x.id===id) || currentTrip; if(!t) return;
+  const url = companyLink(company.slug) + '&trip=' + id;
+  window.open('https://wa.me/?text=' + encodeURIComponent(
+`🚌 ${t.name} — ${company.name}
+📅 ${t.recurring?'رحلة يومية':t.date} 🕖 ${t.time}
+💰 السعر: ${t.price} ر.ع
+🔗 احجز مقعدك من هنا:
+${url}`), '_blank');
+}
 
 function tripStopsC(t){ return (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean); }
 
@@ -152,6 +170,7 @@ function openTrip(id){
     </div>
     ${mapHTML(t)}
     ${trackerHTML(t)}
+    <button class="btn btn-ghost" style="margin-bottom:10px" onclick="shareTrip('${t.id}')">📤 مشاركة الرحلة</button>
     <button class="btn btn-primary" ${(left<=0||departed)?'disabled':''} onclick="show('s-book')">${departed?'🚌 انطلقت الرحلة — توقّف الحجز':left>0?'احجز الآن':'اكتملت المقاعد'}</button>`;
   show('s-trip');
 }

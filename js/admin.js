@@ -41,6 +41,15 @@ async function loadAdmin(){
   qs('pendingList').innerHTML = pending.length ? pending.map(coRow).join('')
     : '<div class="empty">لا توجد طلبات جديدة ✔</div>';
   show('s-dash', false);
+  // 9) جرس التنبيهات: عداد أحمر لحظي لطلبات الشركات الجديدة
+  if(!window._bellUnsub){
+    window._bellUnsub = db.collection('companies').where('status','==','pending')
+      .onSnapshot(snp=>{
+        const el = qs('admBell'); if(!el) return;
+        el.textContent = snp.size;
+        el.style.display = snp.size ? 'flex' : 'none';
+      }, e=>console.error(e));
+  }
   // استعادة الصفحة التي كان عليها الأدمن قبل التحديث
   if(!_adminRestored){
     _adminRestored = true;

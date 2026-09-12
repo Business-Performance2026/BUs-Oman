@@ -479,10 +479,11 @@ function waMessage(b){
 /* رسالة واتساب جاهزة لإشعار العميل بالإلغاء */
 function waCancelMessage(b){
   return encodeURIComponent(
-'⛔ إشعار إلغاء حجز ⛔\n'
+'⛔📢 إشعار إلغاء حجز 📢⛔\n'
 + '🏢 ' + company.name + '\n'
 + '━━━━━━━━━━━━━━━\n'
-+ 'عزيزنا ' + b.name + '، نعتذر منك 🌹\n'
++ 'عزيزنا ' + b.name + ' 🌹\n'
++ 'نعتذر منك بكل صدق 💔\n'
 + 'تم إلغاء حجزك في الرحلة التالية:\n'
 + '━━━━━━━━━━━━━━━\n'
 + '🚌 الرحلة: ' + b.tripName + '\n'
@@ -492,9 +493,10 @@ function waCancelMessage(b){
 + '🎫 رقم التذكرة: ' + b.code + '\n'
 + '📝 سبب الإلغاء: ' + (b.cancelReason||'—') + '\n'
 + '━━━━━━━━━━━━━━━\n'
-+ '🔗 يمكنك حجز رحلة أخرى من هنا:\n' + companyLink(company.slug) + '\n'
++ '🙏 نسعد بخدمتك في رحلة قادمة\n'
++ '🔗 احجز رحلة أخرى بسهولة من هنا:\n' + companyLink(company.slug) + '\n'
 + '━━━━━━━━━━━━━━━\n'
-+ 'نعتذر منك مرة أخرى 🌹');
++ '💚 شاكرين تفهمك وتعاونك');
 }
 /* 4) تصدير الحجوزات إلى Excel (CSV يدعم العربية) */
 async function exportBookings(){
@@ -552,14 +554,23 @@ async function exportBookings(){
 function shareTripCo(id){
   const t = myTrips.find(x=>x.id===id); if(!t) return;
   const url = companyLink(company.slug) + '&trip=' + id;
+  const stops = (t.routeGo&&t.routeGo.length) ? ('🛣️ المسار: ' + t.routeGo.join(' ← ') + '\n') : '';
   window.open('https://wa.me/?text=' + encodeURIComponent(
-`🚌 ${t.name} — ${company.name}
-📅 ${t.recurring?'رحلة يومية':t.date} 🕖 ${t.time}
-💰 السعر: ${t.price} ر.ع
-🔗 احجز مقعدك من هنا:
-${url}`), '_blank');
+'🚌✨ رحلة جديدة متاحة للحجز ✨🚌\n'
++ '🏢 ' + company.name + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '📌 الرحلة: ' + t.name + '\n'
++ '📍 من: ' + t.from + '  ⬅️  إلى: ' + t.to + '\n'
++ stops
++ '📅 التاريخ: ' + (t.recurring?'🔄 رحلة يومية':t.date) + '\n'
++ '🕖 وقت الانطلاق: ' + t.time + '\n'
++ '💺 المقاعد المتاحة: ' + ((t.seats||0)-(t.booked||0)) + ' مقعد\n'
++ '💰 السعر: ' + t.price + ' ر.ع\n'
++ '━━━━━━━━━━━━━━━\n'
++ '🎫 احجز مقعدك الآن بضغطة زر:\n' + url + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '🌹 نتشرف بخدمتكم'), '_blank');
 }
-
 async function openBookings(){
   show('s-bookings');
   qs('bookingsList').innerHTML = '<div class="empty"><span class="spin"></span> جارِ التحميل...</div>';

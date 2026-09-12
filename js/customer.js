@@ -95,14 +95,22 @@ qs('typeChips').addEventListener('click', e=>{
 function shareTrip(id){
   const t = trips.find(x=>x.id===id) || currentTrip; if(!t) return;
   const url = companyLink(company.slug) + '&trip=' + id;
+  const stops = (t.routeGo&&t.routeGo.length) ? ('🛣️ المسار: ' + t.routeGo.join(' ← ') + '\n') : '';
   window.open('https://wa.me/?text=' + encodeURIComponent(
-`🚌 ${t.name} — ${company.name}
-📅 ${t.recurring?'رحلة يومية':t.date} 🕖 ${t.time}
-💰 السعر: ${t.price} ر.ع
-🔗 احجز مقعدك من هنا:
-${url}`), '_blank');
+'🚌✨ رحلة متاحة للحجز ✨🚌\n'
++ '🏢 ' + company.name + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '📌 الرحلة: ' + t.name + '\n'
++ '📍 من: ' + t.from + '  ⬅️  إلى: ' + t.to + '\n'
++ stops
++ '📅 التاريخ: ' + (t.recurring?'🔄 رحلة يومية':t.date) + '\n'
++ '🕖 وقت الانطلاق: ' + t.time + '\n'
++ '💰 السعر: ' + t.price + ' ر.ع\n'
++ '━━━━━━━━━━━━━━━\n'
++ '🎫 احجز مقعدك الآن بضغطة زر:\n' + url + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '🌹 نتشرف بخدمتكم'), '_blank');
 }
-
 function tripStopsC(t){ return (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean); }
 
 /* تعبئة محطات الصعود المتبقية — يرجع false إذا انطلقت الرحلة من كل المحطات (يُمنع الحجز) */

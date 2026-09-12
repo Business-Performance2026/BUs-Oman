@@ -290,6 +290,7 @@ function openTracker(id){
       <button class="btn ${cur===-1?'btn-primary':'btn-ghost'}" data-i="-1">🚏 لم تنطلق بعد</button>
       ${stops.map((s2,i)=>`<button class="btn ${cur===i?'btn-primary':'btn-ghost'}" data-i="${i}">${i===stops.length-1?'🏁':'🟢'} ${esc(s2)}</button>`).join('')}
     </div>
+    ${!isEmployee && stops.length>=2 ? `<iframe src="${'https://maps.google.com/maps?saddr='+encodeURIComponent(stops[0]+'، عمان')+'&daddr='+stops.slice(1).map(s3=>encodeURIComponent(s3+'، عمان')).join('+to:')+'&hl=ar&output=embed'}" style="width:100%;height:210px;border:0;border-radius:12px;margin-bottom:10px" loading="lazy"></iframe>` : ''}
     <button class="btn btn-ghost" id="mNo">إغلاق</button>
   </div>`;
   document.body.appendChild(m);
@@ -317,6 +318,7 @@ function openAddTrip(){
   qs('tripErr').classList.remove('show');
   ['tName','tFrom','tTo','tBus','tDate','tTime','tSeats','tPrice'].forEach(i=>qs(i).value='');
   ['go1','go2','go3','go4','go5','back1','back2','back3','back4','back5'].forEach(i=>qs(i).value='');
+  ['gt1','gt2','gt3','gt4','gt5','bt1','bt2','bt3','bt4','bt5'].forEach(i=>qs(i).value='');
   qs('tRecurring').checked = false;
   fillBusList();
   show('s-addtrip');
@@ -335,6 +337,8 @@ function openEditTrip(id){
   for(let i=1;i<=5;i++){
     qs('go'+i).value = (x.routeGo||[])[i-1]||'';
     qs('back'+i).value = (x.routeBack||[])[i-1]||'';
+    qs('gt'+i).value = (x.routeGoTimes||[])[i-1]||'';
+    qs('bt'+i).value = (x.routeBackTimes||[])[i-1]||'';
   }
   fillBusList();
   show('s-addtrip');
@@ -345,8 +349,10 @@ async function saveTrip(){
         bus=qs('tBus').value.trim(),
         type=qs('tType').value, date=qs('tDate').value, time=qs('tTime').value,
         seats=+qs('tSeats').value, price=+qs('tPrice').value, recurring=qs('tRecurring').checked;
-  const routeGo = [1,2,3,4,5].map(i=>qs('go'+i).value.trim()).filter(Boolean);
-  const routeBack = [1,2,3,4,5].map(i=>qs('back'+i).value.trim()).filter(Boolean);
+  const _rg = [1,2,3,4,5].map(i=>({s:qs('go'+i).value.trim(), t:qs('gt'+i).value})).filter(x=>x.s);
+  const _rb = [1,2,3,4,5].map(i=>({s:qs('back'+i).value.trim(), t:qs('bt'+i).value})).filter(x=>x.s);
+  const routeGo = _rg.map(x=>x.s), routeGoTimes = _rg.map(x=>x.t||'');
+  const routeBack = _rb.map(x=>x.s), routeBackTimes = _rb.map(x=>x.t||'');
   if(!name||!from||!to||!bus||!date||!time||!seats||isNaN(price)){
     err('tripErr','يرجى تعبئة جميع الحقول المطلوبة'); return; }
   const btn=qs('tripBtn'); btn.disabled=true; btn.textContent='جارِ الحفظ...';
@@ -360,12 +366,12 @@ async function saveTrip(){
     }
     if(editTripId){
       await db.collection('trips').doc(editTripId).update({
-        name, from, to, busNumber: bus, type, date, time, seats, price, recurring, routeGo, routeBack });
+        name, from, to, busNumber: bus, type, date, time, seats, price, recurring, routeGo, routeBack, routeGoTimes, routeBackTimes });
       toast('تم تعديل الرحلة ✔');
     } else {
       await db.collection('trips').add({
         companyId: company.id, name, from, to, busNumber: bus, type, date, time,
-        seats, price, recurring, routeGo, routeBack, booked: 0, active: true, lastReset: new Date().toISOString().slice(0,10),
+        seats, price, recurring, routeGo, routeBack, routeGoTimes, routeBackTimes, booked: 0, active: true, lastReset: new Date().toISOString().slice(0,10),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       toast('تمت إضافة الرحلة ✔');
@@ -467,12 +473,14 @@ async function openBookings(){
           <div style="display:flex;gap:12px;align-items:center">
             <div class="ava" style="width:44px;height:44px;border-radius:14px;background:var(--teal-l);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;flex-shrink:0">${esc(b.name).charAt(0)}</div>
             <div style="flex:1;min-width:0">
-              <h4 style="font-weight:800">${esc(b.name)} <span class="badge b-teal">${b.seats} مقعد</span></h4>
-              <p class="muted" style="font-size:12.5px">${esc(b.tripName)} • ${esc(b.date)} ${esc(b.time)}</p>
-              <p dir="ltr" style="text-align:right;font-size:12px;color:var(--muted)">${esc(b.whatsapp)} • ${esc(b.code)}</p>
-              <p style="font-size:12.5px">${PAY_LABEL[b.paymentMethod]||''}
-                ${b.status==='confirmed' ? '<span class="badge b-green">مؤكد</span>'
-                  : b.status==='cancelled' ? '<span class="badge b-red">ملغي</span>'
+              <h4 style="font-weight:800">${esc(b.name)} <span class="badge b-teal">💺 ${b.seats}</span></h4>
+              <p class="meta" style="margin-top:4px">🚌 ${esc(b.tripName)}</p>
+              <p class="meta">📅 ${esc(b.date)} • 🕖 ${esc(b.time)}</p>
+              ${b.boardingStop ? `<p class="meta">🚏 صعود: ${esc(b.boardingStop)}</p>` : ''}
+              <p class="meta" dir="ltr" style="text-align:right">📱 ${esc(b.whatsapp)} • 🔖 ${esc(b.code)}</p>
+              <p style="font-size:12.5px;margin-top:4px">${PAY_LABEL[b.paymentMethod]||''}
+                ${b.status==='confirmed' ? '<span class="badge b-green">مؤكد ✔</span>'
+                  : b.status==='cancelled' ? '<span class="badge b-red">ملغي ⛔</span>'
                   : '<span class="badge b-gold">بانتظار تأكيد الدفع</span>'}
               </p>
               ${b.status==='cancelled' ? `<p style="font-size:12px;color:var(--red)">سبب الإلغاء: ${esc(b.cancelReason||'')}</p>` : ''}
@@ -485,6 +493,9 @@ async function openBookings(){
             ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats}')">✖️ إلغاء</button>` : ''}
           </div>
         </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
+    }, e=>{
+      console.error(e);
+      qs('bookingsList').innerHTML = '<div class="empty">تعذر تحميل الحجوزات — حدّث الصفحة</div>';
     });
 }
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رحلاتك — حجز رحلة</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 <div id="phone">
@@ -52,6 +52,9 @@
         <div class="error" id="bookErr"></div>
         <div class="field"><label>الاسم الكامل *</label><input id="bName" placeholder="اسم المسافر"></div>
         <div class="field"><label>رقم الواتساب * <span class="muted">(تصلك عليه التذكرة)</span></label><input id="bWa" inputmode="tel" placeholder="9xxxxxxx" dir="ltr" style="text-align:right"></div>
+        <div class="field" id="bStopWrap" style="display:none"><label>🚏 محطة الصعود</label>
+          <select id="bStop"></select>
+        </div>
         <div class="field"><label>عدد المقاعد</label>
           <select id="bSeats"><option>1</option><option>2</option><option>3</option><option>4</option></select>
         </div>
@@ -64,6 +67,12 @@
   <section class="screen" id="s-pay">
     <div class="appbar"><h1>طريقة الدفع</h1></div>
     <div class="wrap" id="payBox"></div>
+  </section>
+
+  <!-- التحقق من التذكرة (مسح الباركود) -->
+  <section class="screen" id="s-verify">
+    <div class="appbar"><h1>التحقق من التذكرة</h1></div>
+    <div class="wrap" id="verifyBox"></div>
   </section>
 
   <!-- التذكرة -->
@@ -99,8 +108,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=11"></script>
-<script src="js/common.js?v=11"></script>
-<script src="js/customer.js?v=11"></script>
+<script src="js/firebase-config.js?v=12"></script>
+<script src="js/common.js?v=12"></script>
+<script src="js/customer.js?v=12"></script>
 </body>
 </html>

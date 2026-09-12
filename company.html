@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 <div id="phone" class="has-nav">
@@ -158,15 +158,19 @@
       </div>
       <div class="card">
         <h3 style="font-weight:900;margin-bottom:4px">🛣️ مسار الرحلة <span class="muted" style="font-size:12px">(اختياري)</span></h3>
-        <p class="muted" style="font-size:12px;margin-bottom:12px">عبّئ المحطات بالترتيب — يظهر للعميل فقط ما تعبّيه</p>
+        <p class="muted" style="font-size:12px;margin-bottom:12px">عبّئ المحطات بالترتيب مع وقت الوصول التقريبي (اختياري) — يظهر للعميل فقط ما تعبّيه</p>
         <label style="font-size:13px;font-weight:800;color:var(--teal)">مسار الذهاب</label>
-        <div class="row" style="margin-top:6px"><div class="field"><input id="go1" placeholder="محطة 1"></div><div class="field"><input id="go2" placeholder="محطة 2"></div></div>
-        <div class="row"><div class="field"><input id="go3" placeholder="محطة 3"></div><div class="field"><input id="go4" placeholder="محطة 4"></div></div>
-        <div class="field"><input id="go5" placeholder="محطة 5"></div>
+        <div class="row" style="margin-top:6px"><div class="field" style="flex:1.5"><input id="go1" placeholder="محطة 1"></div><div class="field"><input id="gt1" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="go2" placeholder="محطة 2"></div><div class="field"><input id="gt2" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="go3" placeholder="محطة 3"></div><div class="field"><input id="gt3" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="go4" placeholder="محطة 4"></div><div class="field"><input id="gt4" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="go5" placeholder="محطة 5"></div><div class="field"><input id="gt5" type="time" title="وقت الوصول التقريبي"></div></div>
         <label style="font-size:13px;font-weight:800;color:var(--teal)">مسار الرجوع</label>
-        <div class="row" style="margin-top:6px"><div class="field"><input id="back1" placeholder="محطة 1"></div><div class="field"><input id="back2" placeholder="محطة 2"></div></div>
-        <div class="row"><div class="field"><input id="back3" placeholder="محطة 3"></div><div class="field"><input id="back4" placeholder="محطة 4"></div></div>
-        <div class="field" style="margin-bottom:0"><input id="back5" placeholder="محطة 5"></div>
+        <div class="row" style="margin-top:6px"><div class="field" style="flex:1.5"><input id="back1" placeholder="محطة 1"></div><div class="field"><input id="bt1" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="back2" placeholder="محطة 2"></div><div class="field"><input id="bt2" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="back3" placeholder="محطة 3"></div><div class="field"><input id="bt3" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row"><div class="field" style="flex:1.5"><input id="back4" placeholder="محطة 4"></div><div class="field"><input id="bt4" type="time" title="وقت الوصول التقريبي"></div></div>
+        <div class="row" style="margin-bottom:0"><div class="field" style="flex:1.5;margin-bottom:0"><input id="back5" placeholder="محطة 5"></div><div class="field" style="margin-bottom:0"><input id="bt5" type="time" title="وقت الوصول التقريبي"></div></div>
       </div>
       <button class="btn btn-primary" id="tripBtn" onclick="saveTrip()">حفظ الرحلة</button>
     </div>
@@ -210,7 +214,7 @@
 
   <!-- الإعدادات -->
   <section class="screen" id="s-settings">
-    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>الإعدادات</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>ملفي</h1><button class="side" onclick="logout()">⎋ خروج</button></div>
     <div class="wrap">
       <div class="card">
         <h3 style="font-weight:900;margin-bottom:12px">هوية الشركة</h3>
@@ -259,7 +263,7 @@
       <button data-perm="cal" onclick="openCal()"><span class="i">🗓️</span>الجدول</button>
       <button data-perm="bookings" onclick="openBookings()"><span class="i">🎫</span>الحجوزات</button>
       <button data-owner onclick="openEmps()"><span class="i">👥</span>الموظفون</button>
-      <button data-owner onclick="openSettings()"><span class="i">⚙️</span>الإعدادات</button>
+      <button data-owner onclick="openSettings()"><span class="i">👤</span>ملفي</button>
     </nav>
 </div>
 
@@ -268,8 +272,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=11"></script>
-<script src="js/common.js?v=11"></script>
-<script src="js/company.js?v=11"></script>
+<script src="js/firebase-config.js?v=12"></script>
+<script src="js/common.js?v=12"></script>
+<script src="js/company.js?v=12"></script>
 </body>
 </html>

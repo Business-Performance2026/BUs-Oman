@@ -85,6 +85,21 @@ qs('typeChips').addEventListener('click', e=>{
   b.classList.add('on'); currentType = b.dataset.t; renderTrips();
 });
 
+function tripStopsC(t){ return (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean); }
+
+/* تعبئة محطات الصعود المتبقية — يرجع false إذا انطلقت الرحلة من كل المحطات (يُمنع الحجز) */
+function fillBoardingStops(t){
+  const wrap = qs('bStopWrap'), sel = qs('bStop');
+  const stops = tripStopsC(t), times = t.routeGoTimes||[];
+  const cur = (t.currentStop==null)?-1:t.currentStop;
+  const up = stops.map((nm,i)=>({nm,i})).filter(x=>x.i>cur);
+  if(stops.length<2){ wrap.style.display='none'; return true; }
+  if(!up.length){ wrap.style.display='none'; return false; }
+  sel.innerHTML = up.map(x=>`<option value="${esc(x.nm)}">🚏 ${esc(x.nm)}${times[x.i]?' — ⏰ '+times[x.i]:''}</option>`).join('');
+  wrap.style.display='';
+  return true;
+}
+
 /* خارطة جوجل مضمّنة تعرض مسار الرحلة (مجانية — بدون API Key) */
 function mapHTML(t){
   const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
@@ -120,6 +135,7 @@ function openTrip(id){
   currentTrip = trips.find(t=>t.id===id);
   saveNavState({ tripId: id });
   const t = currentTrip, left = seatsLeft(t);
+  const departed = !fillBoardingStops(t);
   qs('tripDetail').innerHTML = `
     <div class="card" style="padding:0;overflow:hidden">
       <div style="height:140px;background:linear-gradient(140deg,var(--teal),var(--navy2));display:flex;align-items:center;justify-content:center;font-size:60px">${icon(t.type)}</div>
@@ -135,22 +151,84 @@ function openTrip(id){
     </div>
     ${mapHTML(t)}
     ${trackerHTML(t)}
-    <button class="btn btn-primary" ${left<=0?'disabled':''} onclick="show('s-book')">${left>0?'احجز الآن':'اكتملت المقاعد'}</button>`;
+    <button class="btn btn-primary" ${(left<=0||departed)?'disabled':''} onclick="show('s-book')">${departed?'🚌 انطلقت الرحلة — توقّف الحجز':left>0?'احجز الآن':'اكتملت المقاعد'}</button>`;
   show('s-trip');
+}
+
+/* ===== التحقق من التذكرة عند مسح الباركود ===== */
+async function verifyTicket(code){
+  show('s-verify', false);
+  qs('verifyBox').innerHTML = '<div class="empty"><span class="spin"></span> جارِ التحقق من التذكرة...</div>';
+  const PAY_L = { cash:'💵 كاش', visa:'💳 فيزا', transfer:'🏦 تحويل' };
+  try{
+    const snap = await db.collection('bookings')
+      .where('companyId','==',company.id).where('code','==',code).limit(1).get();
+    if(snap.empty){
+      qs('verifyBox').innerHTML = `<div class="vcard" style="border-top:6px solid var(--red)">
+        <div style="font-size:56px">❌</div>
+        <h2 style="font-weight:900;margin:8px 0;color:var(--red)">التذكرة غير موجودة</h2>
+        <p class="muted">لم يتم العثور على تذكرة بهذا الرمز<br><b dir="ltr">${esc(code)}</b></p>
+      </div>`;
+      return;
+    }
+    const bk = snap.docs[0].data();
+    let expired = false;
+    if(bk.tripId){
+      try{
+        const td = await db.collection('trips').doc(bk.tripId).get();
+        const tr = td.data()||{};
+        if(!tr.recurring && tr.date && tr.date < new Date().toISOString().slice(0,10)) expired = true;
+      }catch(e){}
+    }
+    const paid = bk.paymentStatus==='confirmed' || bk.status==='confirmed';
+    let head;
+    if(bk.status==='cancelled'){
+      head = `<div class="vcard" style="border-top:6px solid var(--red)">
+        <div style="font-size:56px">⛔</div>
+        <h2 style="font-weight:900;margin:8px 0;color:var(--red)">تذكرة ملغية</h2>
+        <p class="muted">أُلغي هذا الحجز من الشركة${bk.cancelReason?'<br>السبب: '+esc(bk.cancelReason):''}</p>`;
+    } else if(expired){
+      head = `<div class="vcard" style="border-top:6px solid #94a3b8">
+        <div style="font-size:56px">⌛</div>
+        <h2 style="font-weight:900;margin:8px 0;color:#64748b">التذكرة منتهية</h2>
+        <p class="muted">انتهت الرحلة وتم استخدام هذا الباركود مسبقًا</p>`;
+    } else {
+      head = `<div class="vcard" style="border-top:6px solid #16a34a">
+        <div style="font-size:56px">✅</div>
+        <h2 style="font-weight:900;margin:8px 0;color:#16a34a">تذكرة صالحة</h2>
+        <p class="muted">هذا الشخص حاجز فعلاً في هذه الرحلة</p>`;
+    }
+    qs('verifyBox').innerHTML = head + `
+      <div style="text-align:right;margin-top:14px">
+        <div class="tline"><span class="muted">👤 المسافر</span><b>${esc(bk.name)}</b></div>
+        <div class="tline"><span class="muted">🚌 الرحلة</span><b>${esc(bk.tripName)}</b></div>
+        <div class="tline"><span class="muted">📅 التاريخ</span><b>${esc(bk.date)}</b></div>
+        <div class="tline"><span class="muted">🕖 الوقت</span><b>${esc(bk.time)}</b></div>
+        ${bk.boardingStop?`<div class="tline"><span class="muted">🚏 محطة الصعود</span><b>${esc(bk.boardingStop)}</b></div>`:''}
+        <div class="tline"><span class="muted">💺 المقاعد</span><b>${bk.seats}</b></div>
+        <div class="tline"><span class="muted">💳 الدفع</span><b>${PAY_L[bk.paymentMethod]||''} ${paid?'<span class="badge b-green">مدفوع ✔</span>':'<span class="badge b-gold">لم يُدفع بعد</span>'}</b></div>
+        <div class="tline" style="border:none"><span class="muted">🔖 الرمز</span><b dir="ltr">${esc(bk.code)}</b></div>
+      </div>
+    </div>`;
+  }catch(e){
+    console.error(e);
+    qs('verifyBox').innerHTML = '<div class="empty">تعذر التحقق — تحقق من الإنترنت وأعد المحاولة</div>';
+  }
 }
 
 /* ===== خطوة 1: بيانات المسافر ثم اختيار الدفع ===== */
 function submitBooking(){
   const name=qs('bName').value.trim(),
         wa=qs('bWa').value.trim(), seats=+qs('bSeats').value;
+  const boardingStop = qs('bStopWrap').style.display!=='none' ? qs('bStop').value : '';
   const err = qs('bookErr');
   err.classList.remove('show');
   if(!name || !wa){ err.textContent='يرجى تعبئة جميع الحقول المطلوبة'; err.classList.add('show'); return; }
   if(!/^\d{8,15}$/.test(wa.replace(/\D/g,''))){ err.textContent='رقم الواتساب غير صحيح'; err.classList.add('show'); return; }
   const t = currentTrip, left = seatsLeft(t);
   if(seats > left){ err.textContent='عدد المقاعد المطلوب أكبر من المتاح ('+left+')'; err.classList.add('show'); return; }
-  pendingBooking = { name, whatsapp: wa, seats };
-  saveNavState({ tripId: currentTrip.id, pending: { name, whatsapp: wa, seats } });
+  pendingBooking = { name, whatsapp: wa, seats, boardingStop };
+  saveNavState({ tripId: currentTrip.id, pending: { name, whatsapp: wa, seats, boardingStop } });
   renderPayment();
 }
 
@@ -225,11 +303,11 @@ async function submitTransfer(){
 async function finalizeBooking(paymentMethod, status, receiptUrl){
   const t = currentTrip, p = pendingBooking;
   try{
-    const code = 'TKT-' + Date.now().toString(36).toUpperCase();
+    const code = 'OM-' + Math.floor(1000+Math.random()*9000);
     await db.collection('bookings').add({
       tripId: t.id, companyId: company.id, tripName: t.name,
       from: t.from, to: t.to,
-      name: p.name, whatsapp: p.whatsapp, seats: p.seats,
+      name: p.name, whatsapp: p.whatsapp, seats: p.seats, boardingStop: p.boardingStop||'',
       date: t.recurring ? 'يوميًا' : t.date, time: t.time, price: t.price,
       paymentMethod, paymentStatus: status==='confirmed'?'confirmed':'pending',
       receiptUrl: receiptUrl || null,
@@ -241,7 +319,7 @@ async function finalizeBooking(paymentMethod, status, receiptUrl){
     t.booked = (t.booked||0) + p.seats;
     renderTrips();
     showTicket({ tripName:t.name, from:t.from, to:t.to, name:p.name, seats:p.seats,
-      date: t.recurring?'يوميًا':t.date, time:t.time, code,
+      date: t.recurring?'يوميًا':t.date, time:t.time, code, boardingStop: p.boardingStop||'',
       status });
   }catch(e){ console.error(e); toast('حدث خطأ، حاول مجددًا'); }
 }
@@ -265,6 +343,7 @@ function showTicket(b, bookingId, tripId){
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${esc(b.date)}</b></div>
         <div class="tline"><span class="muted">🕖 الوقت</span><b>${esc(b.time)}</b></div>
         <div class="tline"><span class="muted">💺 المقاعد</span><b>${b.seats}</b></div>
+        ${b.boardingStop?`<div class="tline"><span class="muted">🚏 محطة الصعود</span><b>${esc(b.boardingStop)}</b></div>`:''}
         <div class="tline"><span class="muted">الحالة</span><span class="badge ${cls}">${label}</span></div>
         <div class="tline" style="border:none"><span class="muted">🔖 رمز التذكرة</span><b dir="ltr">${esc(b.code)}</b></div>
       </div>
@@ -338,7 +417,7 @@ function restoreSession(){
   let st = {}; try{ st = JSON.parse(SAVED_AT_LOAD.state||'{}'); }catch(e){}
   const t = st.tripId ? trips.find(x=>x.id===st.tripId) : null;
   if(saved==='s-trip' && t){ openTrip(t.id); return; }
-  if(saved==='s-book' && t){ currentTrip=t; show('s-book'); restoreDraft('s-book'); return; }
+  if(saved==='s-book' && t){ currentTrip=t; fillBoardingStops(t); show('s-book'); restoreDraft('s-book'); return; }
   if(saved==='s-pay' && t && st.pending){ currentTrip=t; pendingBooking=st.pending; renderPayment(); return; }
   if(saved==='s-ticket' && st.ticket){ showTicket(st.ticket, st.bookingId, st.tripId2); return; }
   if(saved==='s-find'){ show('s-find'); restoreDraft('s-find'); }

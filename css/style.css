@@ -148,3 +148,6 @@ h2.sec small{font-size:12px;color:var(--teal);font-weight:700;cursor:pointer}
 .tstop.next{opacity:.55}
 .tinfo{flex:1;line-height:1.5}
 .tinfo span{display:block;font-size:12px;color:#64748b}
+
+/* بطاقة التحقق من التذكرة */
+.vcard{background:#fff;border-radius:20px;padding:26px 18px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.08)}

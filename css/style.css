@@ -79,7 +79,9 @@ body{font-family:'Tajawal',system-ui,sans-serif;background:#dfe5ea;color:var(--i
 .lrow p{font-size:12px;color:var(--muted)}
 .icon-btn{border:none;background:#f2f5f8;min-width:36px;height:36px;border-radius:12px;cursor:pointer;font-size:15px;font-family:inherit;font-weight:800;padding:0 10px}
 .ticket{background:#fff;border-radius:22px;overflow:hidden;box-shadow:var(--shadow)}
-.ticket .tp{background:linear-gradient(140deg,var(--teal),var(--navy2));color:#fff;padding:18px;text-align:center}
+.ticket .tp{background:linear-gradient(140deg,var(--teal),var(--navy2));color:#fff;padding:22px;text-align:center}
+.ticket .tp #qrT, .ticket .tp .qr-frame{background:#fff;border:2px dashed rgba(13,36,64,.25);border-radius:18px;padding:14px;display:inline-block;margin:4px auto;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.ticket .tp .qr-cap{color:rgba(255,255,255,.85);font-size:12px;font-weight:700;margin-top:10px}
 .ticket .tb{padding:18px}
 .tline{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px;gap:8px}
 .tline b{font-weight:800}

@@ -490,7 +490,7 @@ async function openBookings(){
             <button class="icon-btn" style="background:#dff3e9;color:var(--green)" onclick="window.open('${waLink(b.whatsapp)}?text=${waMessage(b)}','_blank')">💬 واتساب</button>
             ${b.status!=='confirmed' && b.status!=='cancelled' ? `<button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="confirmPay('${b.id}')">✔️ تأكيد الدفع</button>` : ''}
             ${b.receiptUrl ? `<a class="icon-btn" style="background:#e8ecf8;color:var(--navy2);text-decoration:none;display:flex;align-items:center;justify-content:center" href="${b.receiptUrl}" target="_blank">📎 الوصل</a>` : ''}
-            ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats}')">✖️ إلغاء</button>` : ''}
+            ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats})">✖️ إلغاء</button>` : ''}
           </div>
         </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
     }, e=>{

@@ -347,7 +347,7 @@ function showTicket(b, bookingId, tripId){
   const [cls,label] = statusLabel(b.status);
   qs('ticketBox').innerHTML = `
     <div class="ticket">
-      <div class="tp"><div id="qrT"></div></div>
+      <div class="tp"><div id="qrT" class="qr-frame"></div><div class="qr-cap">🎫 امسح الباركود للتحقق من التذكرة</div></div>
       <div class="tb">
         <h3 style="font-weight:900;text-align:center">${esc(b.tripName)}</h3>
         <p class="muted center" style="margin-bottom:10px">${esc(b.from||'')} ${b.from?'←':''} ${esc(b.to||'')}</p>
@@ -411,9 +411,14 @@ function cancelMyBooking(id, tripId, seats){
   async ()=>{
     try{
       await db.collection('bookings').doc(id).delete();
-      await db.collection('trips').doc(tripId).update({
-        booked: firebase.firestore.FieldValue.increment(-seats)
-      });
+      // استرجاع المقاعد خطوة مستقلة — لا يفشل الإلغاء لو الرحلة حُذفت
+      if(tripId && tripId!=='undefined' && seats>0){
+        try{
+          await db.collection('trips').doc(tripId).update({
+            booked: firebase.firestore.FieldValue.increment(-seats)
+          });
+        }catch(e2){ console.warn('استرجاع المقاعد:', e2); }
+      }
       toast('تم إلغاء الحجز ✔');
       // تحديث القائمة فورًا بدون تحديث الصفحة
       if(lastFindWa){ qs('findWa').value = lastFindWa; findBookings(); show('s-find'); }

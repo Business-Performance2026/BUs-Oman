@@ -111,7 +111,13 @@ auth.onAuthStateChanged(async user => {
       qs('pendMsg').innerHTML='تم إيقاف حساب شركتك من الإدارة.'
         + (company.suspensionReason ? '<br><b>السبب:</b> '+esc(company.suspensionReason) : '')
         + '<br>تواصل مع الدعم لإعادة التفعيل.';
-      show('s-pending', false); return;
+      show('s-pending', false);
+      // بوب أب ثابت — لا يختفي حتى يضغط صاحب الشركة "حسنًا"
+      setTimeout(()=> infoBox({ icon:'⛔', title:'الحساب موقوف',
+        msg: 'تم إيقاف حساب شركتك من الإدارة.'
+          + (company.suspensionReason ? '<br><b>السبب:</b> '+esc(company.suspensionReason) : '')
+          + '<br>تواصل مع الدعم لإعادة التفعيل.', ok:'حسنًا' }), 400);
+      return;
     }
     if(!companyValid(company)){
       qs('pendIcon').textContent='⌛'; qs('pendTitle').textContent='انتهت الفترة التجريبية / الاشتراك';
@@ -185,9 +191,13 @@ async function enterDashboard(){
   // يظهر إيميل الحساب المسجّل دخوله فعليًا (مالك أو موظف)
   qs('dEmail').textContent = (currentUser?.email || company.email) + (isEmployee ? ' — موظف' : '');
 
-  // إعلان الإدارة للشركة: يظهر كل مرة يُفتح التطبيق ما دام مفعّلًا
+  // إعلان الإدارة: يظهر مرة واحدة عند تسجيل الدخول — تحديث الصفحة لا يعيده
   if(company.announcement?.active && company.announcement?.text){
-    setTimeout(()=> infoBox({ icon:'📢', title:'تنبيه من إدارة المنصة', msg: esc(company.announcement.text) }), 600);
+    const annKey = 'ann:'+company.id+':'+company.announcement.text.length+':'+company.announcement.text.slice(0,12);
+    if(!sessionStorage.getItem(annKey)){
+      sessionStorage.setItem(annKey,'1');
+      setTimeout(()=> infoBox({ icon:'📢', title:'تنبيه من إدارة المنصة', msg: esc(company.announcement.text), ok:'حسنًا' }), 600);
+    }
   }
 
   // تنبيه الاشتراك: يظهر فقط عند بقاء 7 أيام أو أقل

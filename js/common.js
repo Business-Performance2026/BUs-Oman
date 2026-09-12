@@ -106,6 +106,8 @@ async function myRole(uid){
 }
 
 function logout(){
+  // مسح علامات الإعلانات المقروءة — الدخول الجديد يعرضها مرة واحدة
+  Object.keys(sessionStorage).filter(k=>k.startsWith('ann:')).forEach(k=>sessionStorage.removeItem(k));
   auth.signOut().then(()=> location.href='index.html');
 }
 

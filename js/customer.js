@@ -94,7 +94,8 @@ function fillBoardingStops(t){
   const cur = (t.currentStop==null)?-1:t.currentStop;
   const up = stops.map((nm,i)=>({nm,i})).filter(x=>x.i>cur);
   if(stops.length<2){ wrap.style.display='none'; return true; }
-  if(!up.length){ wrap.style.display='none'; return false; }
+  // لازم تبقى محطتان قادمتان على الأقل (محطة صعود + محطة نزول) — وإلا قُفل الحجز
+  if(up.length<2){ wrap.style.display='none'; return false; }
   sel.innerHTML = up.map(x=>`<option value="${esc(x.nm)}">🚏 ${esc(x.nm)}${times[x.i]?' — ⏰ '+times[x.i]:''}</option>`).join('');
   wrap.style.display='';
   return true;
@@ -112,16 +113,16 @@ function mapHTML(t){
   </div>`;
 }
 
-/* تتبع الرحلة: خط زمني عمودي على اليسار يوضح موقع الباص */
+/* تتبع الرحلة: خط زمني عمودي على اليسار يوضح موقع الحافلة */
 function trackerHTML(t){
   const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
   if(stops.length<2) return '';
   const cur = (t.currentStop==null)?-1:t.currentStop;
   return `<div class="track">
-    <div class="track-title">🛰️ تتبع الباص مباشرة ${cur===-1?'<span class="badge b-gold" style="margin-right:6px">لم تنطلق بعد</span>':''}</div>
+    <div class="track-title">🛰️ تتبع الحافلة مباشرة ${cur===-1?'<span class="badge b-gold" style="margin-right:6px">لم تنطلق بعد</span>':''}</div>
     ${stops.map((s2,i)=>{
       const done = cur>i, now = cur===i;
-      const st = done?'مرّ من هنا ✓':now?'الباص هنا الآن 📍':'قادم';
+      const st = done?'مرّ من هنا ✓':now?'الحافلة هنا الآن 📍':'قادم';
       const cls = now?'now':done?'done':'next';
       return `<div class="tstop ${cls}">
         <div class="tdot"></div>
@@ -142,7 +143,7 @@ function openTrip(id){
       <div style="padding:16px">
         <h3 style="font-weight:900;font-size:18px">${esc(t.name)}</h3>
         <p class="route" style="font-size:15px">${esc(t.from)} ← ${esc(t.to)}</p>
-        ${t.busNumber?`<p class="muted">🚌 رقم الباص: <b>${esc(t.busNumber)}</b></p>`:''}
+        ${t.busNumber?`<p class="muted">🚌 رقم الحافلة: <b>${esc(t.busNumber)}</b></p>`:''}
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${t.recurring?'رحلة يومية':fmtDate(new Date(t.date+'T00:00'))}</b></div>
         <div class="tline"><span class="muted">🕖 وقت الانطلاق</span><b>${esc(t.time)}</b></div>
         <div class="tline"><span class="muted">💺 المقاعد المتاحة</span><b>${left} مقعد</b></div>
@@ -167,26 +168,37 @@ async function verifyTicket(code){
       qs('verifyBox').innerHTML = `<div class="vcard" style="border-top:6px solid var(--red)">
         <div style="font-size:56px">❌</div>
         <h2 style="font-weight:900;margin:8px 0;color:var(--red)">التذكرة غير موجودة</h2>
-        <p class="muted">لم يتم العثور على تذكرة بهذا الرمز<br><b dir="ltr">${esc(code)}</b></p>
+        <p class="muted">لم يتم العثور على تذكرة بهذا الرقم<br><b dir="ltr">${esc(code)}</b></p>
       </div>`;
       return;
     }
     const bk = snap.docs[0].data();
-    let expired = false;
+    let expired = false, tripGone = false;
     if(bk.tripId){
       try{
         const td = await db.collection('trips').doc(bk.tripId).get();
-        const tr = td.data()||{};
-        if(!tr.recurring && tr.date && tr.date < new Date().toISOString().slice(0,10)) expired = true;
-      }catch(e){}
-    }
+        if(!td.exists){ tripGone = true; }
+        else{
+          const tr = td.data()||{};
+          if(!tr.recurring && tr.date && tr.date < new Date().toISOString().slice(0,10)) expired = true;
+        }
+      }catch(e){ tripGone = true; }
+    } else { tripGone = true; }
     const paid = bk.paymentStatus==='confirmed' || bk.status==='confirmed';
+    const payState = bk.paymentMethod==='cash'
+      ? '<span class="badge b-teal">يدفع كاش في الحافلة 🚌</span>'
+      : paid ? '<span class="badge b-green">مدفوع ✔</span>' : '<span class="badge b-gold">لم يُدفع بعد</span>';
     let head;
     if(bk.status==='cancelled'){
       head = `<div class="vcard" style="border-top:6px solid var(--red)">
         <div style="font-size:56px">⛔</div>
         <h2 style="font-weight:900;margin:8px 0;color:var(--red)">تذكرة ملغية</h2>
         <p class="muted">أُلغي هذا الحجز من الشركة${bk.cancelReason?'<br>السبب: '+esc(bk.cancelReason):''}</p>`;
+    } else if(tripGone){
+      head = `<div class="vcard" style="border-top:6px solid #94a3b8">
+        <div style="font-size:56px">🚫</div>
+        <h2 style="font-weight:900;margin:8px 0;color:#64748b">الباركود غير صالح</h2>
+        <p class="muted">الرحلة انتهت — قم بحجز رحلة جديدة</p>`;
     } else if(expired){
       head = `<div class="vcard" style="border-top:6px solid #94a3b8">
         <div style="font-size:56px">⌛</div>
@@ -206,8 +218,8 @@ async function verifyTicket(code){
         <div class="tline"><span class="muted">🕖 الوقت</span><b>${esc(bk.time)}</b></div>
         ${bk.boardingStop?`<div class="tline"><span class="muted">🚏 محطة الصعود</span><b>${esc(bk.boardingStop)}</b></div>`:''}
         <div class="tline"><span class="muted">💺 المقاعد</span><b>${bk.seats}</b></div>
-        <div class="tline"><span class="muted">💳 الدفع</span><b>${PAY_L[bk.paymentMethod]||''} ${paid?'<span class="badge b-green">مدفوع ✔</span>':'<span class="badge b-gold">لم يُدفع بعد</span>'}</b></div>
-        <div class="tline" style="border:none"><span class="muted">🔖 الرمز</span><b dir="ltr">${esc(bk.code)}</b></div>
+        <div class="tline"><span class="muted">💳 الدفع</span><b>${PAY_L[bk.paymentMethod]||''} ${payState}</b></div>
+        <div class="tline" style="border:none"><span class="muted">🔖 رقم التذكرة</span><b dir="ltr">${esc(bk.code)}</b></div>
       </div>
     </div>`;
   }catch(e){
@@ -345,11 +357,11 @@ function showTicket(b, bookingId, tripId){
         <div class="tline"><span class="muted">💺 المقاعد</span><b>${b.seats}</b></div>
         ${b.boardingStop?`<div class="tline"><span class="muted">🚏 محطة الصعود</span><b>${esc(b.boardingStop)}</b></div>`:''}
         <div class="tline"><span class="muted">الحالة</span><span class="badge ${cls}">${label}</span></div>
-        <div class="tline" style="border:none"><span class="muted">🔖 رمز التذكرة</span><b dir="ltr">${esc(b.code)}</b></div>
+        <div class="tline" style="border:none"><span class="muted">🔖 رقم التذكرة</span><b dir="ltr">${esc(b.code)}</b></div>
       </div>
     </div>
     ${(()=>{ const tr = trips.find(x=>x.id===(tripId||b.tripId)); return tr?trackerHTML(tr):''; })()}
-    <div class="notice" style="margin-top:14px">يرجى إبراز هذا الرمز عند الصعود إلى الحافلة</div>
+    <div class="notice" style="margin-top:14px">يرجى إبراز رقم التذكرة عند الصعود إلى الحافلة</div>
     <div style="height:12px"></div>
     ${b.status==='cancelled' && b.cancelReason ? `<div class="notice" style="margin-top:14px;background:#fdeaea;color:var(--red)">⛔ أُلغي هذا الحجز من الشركة<br>السبب: ${esc(b.cancelReason)}</div><div style="height:12px"></div>` : ''}
     ${bookingId && b.status!=='cancelled' ? `<button class="btn btn-danger" onclick="cancelMyBooking('${bookingId}','${tripId}',${b.seats})">إلغاء الحجز</button><div style="height:12px"></div>` : ''}

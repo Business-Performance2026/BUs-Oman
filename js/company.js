@@ -268,14 +268,14 @@ function tripRow(x){
       <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="delTrip('${x.id}')">🗑️ حذف</button>
     </div>`}
     <div class="bk-actions" style="margin-top:8px">
-      <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':'الباص الآن في: '+esc(tripStops(x)[x.currentStop]||'')}</button>
+      <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':'الحافلة الآن في: '+esc(tripStops(x)[x.currentStop]||'')}</button>
     </div>
   </div>`;
 }
 
 function tripStops(x){ return (x.routeGo&&x.routeGo.length)?x.routeGo:[x.from,x.to].filter(Boolean); }
 
-/* تتبع الرحلة: الشركة/الموظف يحددان موقع الباص ويظهر للعميل مباشرة */
+/* تتبع الرحلة: الشركة/الموظف يحددان موقع الحافلة ويظهر للعميل مباشرة */
 function openTracker(id){
   const x = myTrips.find(t=>t.id===id); if(!x) return;
   const stops = tripStops(x), cur = (x.currentStop==null)?-1:x.currentStop;
@@ -285,7 +285,7 @@ function openTracker(id){
   m.innerHTML = `<div class="modal">
     <div class="m-ic">📍</div>
     <h3>تتبع الرحلة</h3>
-    <p>${esc(x.name)} — أين وصل الباص الآن؟</p>
+    <p>${esc(x.name)} — أين وصلت الحافلة الآن؟</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
       <button class="btn ${cur===-1?'btn-primary':'btn-ghost'}" data-i="-1">🚏 لم تنطلق بعد</button>
       ${stops.map((s2,i)=>`<button class="btn ${cur===i?'btn-primary':'btn-ghost'}" data-i="${i}">${i===stops.length-1?'🏁':'🟢'} ${esc(s2)}</button>`).join('')}
@@ -357,7 +357,7 @@ async function saveTrip(){
     err('tripErr','يرجى تعبئة جميع الحقول المطلوبة'); return; }
   const btn=qs('tripBtn'); btn.disabled=true; btn.textContent='جارِ الحفظ...';
   try{
-    // حفظ رقم الباص في قائمة الشركة لاستخدامه لاحقًا
+    // حفظ رقم الحافلة في قائمة الشركة لاستخدامه لاحقًا
     const buses = company.buses||[];
     if(bus && !buses.includes(bus)){
       buses.push(bus);
@@ -511,9 +511,14 @@ function cancelBooking(id, tripId, seats){
       await db.collection('bookings').doc(id).update({
         status:'cancelled', cancelReason: reason || 'بدون سبب محدد',
         cancelledAt: firebase.firestore.FieldValue.serverTimestamp() });
-      await db.collection('trips').doc(tripId).update({
-        booked: firebase.firestore.FieldValue.increment(-seats) });
-      toast('تم إلغاء الحجز وأُرجعت المقاعد ✔'); // القائمة تتحدث لحظيًا
+      // استرجاع المقاعد خطوة مستقلة — لا يفشل الإلغاء لو الرحلة حُذفت
+      if(tripId && tripId!=='undefined' && seats>0){
+        try{
+          await db.collection('trips').doc(tripId).update({
+            booked: firebase.firestore.FieldValue.increment(-seats) });
+        }catch(e2){ console.warn('استرجاع المقاعد:', e2); }
+      }
+      toast('تم إلغاء الحجز ✔'); // القائمة تتحدث لحظيًا
     }catch(e){ console.error(e); toast('تعذر الإلغاء: ' + (e.code||e.message)); }
   });
 }

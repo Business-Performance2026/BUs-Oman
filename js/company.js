@@ -454,61 +454,100 @@ function renderDay(){
 const PAY_LABEL = { cash:'💵 كاش', visa:'💳 فيزا', transfer:'🏦 تحويل' };
 
 function waMessage(b){
+  const pm = PAY_LABEL[b.paymentMethod]||'';
+  const cashNote = b.paymentMethod==='cash' ? ' (يُدفع عند الصعود 🚌)' : '';
+  const board = b.boardingStop ? ('🚏 محطة الصعود: ' + b.boardingStop + '\n') : '';
+  const callLine = company.contactCall ? ('\n📞 اتصال مباشر: ' + company.contactCall) : '';
   return encodeURIComponent(
-`🌟 تفاصيل حجزك — ${company.name} 🌟
-━━━━━━━━━━━━━━━
-👤 الاسم: ${b.name}
-🚌 الرحلة: ${b.tripName}
-📅 التاريخ: ${b.date}
-🕖 الوقت: ${b.time}
-💺 عدد المقاعد: ${b.seats}
-🔖 رمز التذكرة: ${b.code}
-━━━━━━━━━━━━━━━
-📱 تواصل معنا واتساب: ${company.whatsapp||''}${company.contactCall?`
-📞 اتصال: ${company.contactCall}`:''}
-🔗 رحلاتنا وحجوزاتك: ${companyLink(company.slug)}
-
-نتشرف بخدمتك 🌹`);
+'🌟✨ تفاصيل حجزك ✨🌟\n'
++ '🏢 ' + company.name + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '👤 المسافر: ' + b.name + '\n'
++ '🚌 الرحلة: ' + b.tripName + '\n'
++ board
++ '📅 التاريخ: ' + b.date + '\n'
++ '🕖 وقت الانطلاق: ' + b.time + '\n'
++ '💺 عدد المقاعد: ' + b.seats + '\n'
++ '🎫 رقم التذكرة: ' + b.code + '\n'
++ '💳 طريقة الدفع: ' + pm + cashNote + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '📱 تواصل معنا واتساب: ' + (company.whatsapp||'') + callLine + '\n'
++ '🔗 حجوزاتك ورحلاتنا:\n' + companyLink(company.slug) + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ 'نتشرف بخدمتك 🌹🚌💨');
 }
-
 /* رسالة واتساب جاهزة لإشعار العميل بالإلغاء */
 function waCancelMessage(b){
   return encodeURIComponent(
-`⛔ إشعار إلغاء حجز — ${company.name}
-━━━━━━━━━━━━━━━
-عزيزنا ${b.name}، نعتذر منك 🌹
-تم إلغاء حجزك في الرحلة التالية:
-🚌 الرحلة: ${b.tripName}
-📅 التاريخ: ${b.date}
-🕖 الوقت: ${b.time}
-🔖 رقم التذكرة: ${b.code}
-📝 سبب الإلغاء: ${b.cancelReason||'—'}
-━━━━━━━━━━━━━━━
-🔗 يمكنك حجز رحلة أخرى من هنا:
-${companyLink(company.slug)}
-
-نعتذر منك مرة أخرى 🌹`);
+'⛔ إشعار إلغاء حجز ⛔\n'
++ '🏢 ' + company.name + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ 'عزيزنا ' + b.name + '، نعتذر منك 🌹\n'
++ 'تم إلغاء حجزك في الرحلة التالية:\n'
++ '━━━━━━━━━━━━━━━\n'
++ '🚌 الرحلة: ' + b.tripName + '\n'
++ '📅 التاريخ: ' + b.date + '\n'
++ '🕖 الوقت: ' + b.time + '\n'
++ '💺 المقاعد: ' + b.seats + '\n'
++ '🎫 رقم التذكرة: ' + b.code + '\n'
++ '📝 سبب الإلغاء: ' + (b.cancelReason||'—') + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ '🔗 يمكنك حجز رحلة أخرى من هنا:\n' + companyLink(company.slug) + '\n'
++ '━━━━━━━━━━━━━━━\n'
++ 'نعتذر منك مرة أخرى 🌹');
 }
-
 /* 4) تصدير الحجوزات إلى Excel (CSV يدعم العربية) */
-function exportBookings(){
+async function exportBookings(){
   const rows = window._bkRows || [];
   if(!rows.length){ toast('لا توجد حجوزات للتصدير'); return; }
-  const head = ['الاسم','الواتساب','الرحلة','التاريخ','الوقت','المقاعد','محطة الصعود','طريقة الدفع','الحالة','رقم التذكرة'];
-  const stMap = { confirmed:'مؤكد', cancelled:'ملغي', pending_payment:'بانتظار الدفع' };
-  const pmMap = { cash:'كاش', visa:'فيزا', transfer:'تحويل' };
-  const ec = v => '"' + String(v??'').replace(/"/g,'""') + '"';
-  const csv = '\ufeff' + [head, ...rows.map(b=>[
-    b.name, b.whatsapp, b.tripName, b.date, b.time, b.seats,
-    b.boardingStop||'', pmMap[b.paymentMethod]||b.paymentMethod||'', stMap[b.status]||b.status||'', b.code
-  ])].map(r=>r.map(ec).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
-  a.download = 'حجوزات-' + (company.name||'الشركة') + '.csv';
-  a.click();
-  toast('تم تصدير ' + rows.length + ' حجز 📊');
+  const stMap = { confirmed:'مؤكد ✔', cancelled:'ملغي ⛔', pending_payment:'بانتظار الدفع ⏳' };
+  const pmMap = { cash:'كاش 💵', visa:'فيزا 💳', transfer:'تحويل 🏦' };
+  const stColor = { confirmed:'FFD9EDD9', cancelled:'FFF9DDDD', pending_payment:'FFFBF0D9' };
+  if(typeof ExcelJS === 'undefined'){ toast('مكتبة Excel لم تُحمّل — تحقق من الإنترنت'); return; }
+  try{
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('الحجوزات', { views:[{ rightToLeft:true }] });
+    ws.columns = [
+      { width:6 },{ width:20 },{ width:16 },{ width:24 },{ width:13 },{ width:9 },
+      { width:9 },{ width:16 },{ width:14 },{ width:18 },{ width:13 }
+    ];
+    // صف العنوان
+    ws.mergeCells('A1:K1');
+    const t = ws.getCell('A1');
+    t.value = '🎫 حجوزات ' + (company.name||'') + ' — ' + new Date().toLocaleDateString('ar-OM');
+    t.font = { bold:true, size:14, color:{argb:'FFFFFFFF'} };
+    t.alignment = { horizontal:'center', vertical:'middle' };
+    t.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF0D2440'} };
+    ws.getRow(1).height = 30;
+    // صف الترويسة
+    const heads = ['#','الاسم','الواتساب','الرحلة','التاريخ','الوقت','مقاعد','محطة الصعود','طريقة الدفع','الحالة','رقم التذكرة'];
+    const hr = ws.addRow(heads);
+    hr.height = 24;
+    hr.eachCell(c=>{
+      c.font = { bold:true, color:{argb:'FFFFFFFF'} };
+      c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF0E7C7B'} };
+      c.alignment = { horizontal:'center', vertical:'middle' };
+      c.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+    });
+    // صفوف البيانات
+    rows.forEach((b,i)=>{
+      const r = ws.addRow([ i+1, b.name, b.whatsapp, b.tripName, b.date, b.time, b.seats,
+        b.boardingStop||'—', pmMap[b.paymentMethod]||b.paymentMethod||'—', stMap[b.status]||b.status||'—', b.code ]);
+      const bg = stColor[b.status] || (i%2 ? 'FFF4F7FB' : 'FFFFFFFF');
+      r.eachCell(c=>{
+        c.alignment = { horizontal:'center', vertical:'middle' };
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:bg} };
+        c.border = { top:{style:'thin',color:{argb:'FFD5DEE8'}}, bottom:{style:'thin',color:{argb:'FFD5DEE8'}}, left:{style:'thin',color:{argb:'FFD5DEE8'}}, right:{style:'thin',color:{argb:'FFD5DEE8'}} };
+      });
+    });
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download = 'حجوزات-' + (company.name||'الشركة') + '.xlsx';
+    a.click();
+    toast('تم تصدير ' + rows.length + ' حجز 📊');
+  }catch(e){ console.error(e); toast('تعذر التصدير، حاول مجددًا'); }
 }
-
 /* 7) مشاركة الرحلة برابط مباشر يفتحها للعميل */
 function shareTripCo(id){
   const t = myTrips.find(x=>x.id===id); if(!t) return;

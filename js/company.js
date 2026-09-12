@@ -244,7 +244,7 @@ async function purgeExpiredTrips(){
     }
     // الرحلة اليومية: مقاعدها ترجع كاملة كل يوم جديد
     if(t.recurring && t.lastReset !== today){
-      batch.update(d.ref, { booked: 0, lastReset: today }); dirty = true;
+      batch.update(d.ref, { booked: 0, lastReset: today, currentStop: -1 }); dirty = true;
     }
   }
   if(dirty) await batch.commit();
@@ -267,7 +267,43 @@ function tripRow(x){
       <button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="toggleTrip('${x.id}',${!x.active})">${x.active?'⏸️ إيقاف':'▶️ تفعيل'}</button>
       <button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="delTrip('${x.id}')">🗑️ حذف</button>
     </div>`}
+    <div class="bk-actions" style="margin-top:8px">
+      <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':'الباص الآن في: '+esc(tripStops(x)[x.currentStop]||'')}</button>
+    </div>
   </div>`;
+}
+
+function tripStops(x){ return (x.routeGo&&x.routeGo.length)?x.routeGo:[x.from,x.to].filter(Boolean); }
+
+/* تتبع الرحلة: الشركة/الموظف يحددان موقع الباص ويظهر للعميل مباشرة */
+function openTracker(id){
+  const x = myTrips.find(t=>t.id===id); if(!x) return;
+  const stops = tripStops(x), cur = (x.currentStop==null)?-1:x.currentStop;
+  closeModal();
+  const m = document.createElement('div');
+  m.className = 'mback';
+  m.innerHTML = `<div class="modal">
+    <div class="m-ic">📍</div>
+    <h3>تتبع الرحلة</h3>
+    <p>${esc(x.name)} — أين وصل الباص الآن؟</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
+      <button class="btn ${cur===-1?'btn-primary':'btn-ghost'}" data-i="-1">🚏 لم تنطلق بعد</button>
+      ${stops.map((s2,i)=>`<button class="btn ${cur===i?'btn-primary':'btn-ghost'}" data-i="${i}">${i===stops.length-1?'🏁':'🟢'} ${esc(s2)}</button>`).join('')}
+    </div>
+    <button class="btn btn-ghost" id="mNo">إغلاق</button>
+  </div>`;
+  document.body.appendChild(m);
+  m.querySelector('#mNo').onclick = closeModal;
+  m.onclick = e=>{ if(e.target===m) closeModal(); };
+  m.querySelectorAll('[data-i]').forEach(b=> b.onclick = async ()=>{
+    const idx = +b.dataset.i;
+    closeModal();
+    try{
+      await db.collection('trips').doc(id).update({ currentStop: idx });
+      x.currentStop = idx;
+      renderDay(); renderUpcoming();
+    }catch(e){ console.error(e); }
+  });
 }
 
 /* ===== الرحلات: إضافة وتعديل ===== */

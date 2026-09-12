@@ -85,6 +85,25 @@ qs('typeChips').addEventListener('click', e=>{
   b.classList.add('on'); currentType = b.dataset.t; renderTrips();
 });
 
+/* تتبع الرحلة: خط زمني عمودي على اليسار يوضح موقع الباص */
+function trackerHTML(t){
+  const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
+  if(stops.length<2) return '';
+  const cur = (t.currentStop==null)?-1:t.currentStop;
+  return `<div class="track">
+    <div class="track-title">🛰️ تتبع الباص مباشرة ${cur===-1?'<span class="badge b-gold" style="margin-right:6px">لم تنطلق بعد</span>':''}</div>
+    ${stops.map((s2,i)=>{
+      const done = cur>i, now = cur===i;
+      const st = done?'مرّ من هنا ✓':now?'الباص هنا الآن 📍':'قادم';
+      const cls = now?'now':done?'done':'next';
+      return `<div class="tstop ${cls}">
+        <div class="tdot"></div>
+        <div class="tinfo"><b>${esc(s2)}</b><span>${i===0?'محطة الانطلاق':i===stops.length-1?'محطة الوصول':'محطة توقف'} • ${st}</span></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 function openTrip(id){
   currentTrip = trips.find(t=>t.id===id);
   saveNavState({ tripId: id });
@@ -104,6 +123,7 @@ function openTrip(id){
         <div class="tline" style="border:none"><span class="muted">💰 السعر</span><b class="price">${t.price} ر.ع</b></div>
       </div>
     </div>
+    ${trackerHTML(t)}
     <button class="btn btn-primary" ${left<=0?'disabled':''} onclick="show('s-book')">${left>0?'احجز الآن':'اكتملت المقاعد'}</button>`;
   show('s-trip');
 }
@@ -238,6 +258,7 @@ function showTicket(b, bookingId, tripId){
         <div class="tline" style="border:none"><span class="muted">🔖 رمز التذكرة</span><b dir="ltr">${esc(b.code)}</b></div>
       </div>
     </div>
+    ${(()=>{ const tr = trips.find(x=>x.id===(tripId||b.tripId)); return tr?trackerHTML(tr):''; })()}
     <div class="notice" style="margin-top:14px">يرجى إبراز هذا الرمز عند الصعود إلى الحافلة</div>
     <div style="height:12px"></div>
     ${b.status==='cancelled' && b.cancelReason ? `<div class="notice" style="margin-top:14px;background:#fdeaea;color:var(--red)">⛔ أُلغي هذا الحجز من الشركة<br>السبب: ${esc(b.cancelReason)}</div><div style="height:12px"></div>` : ''}

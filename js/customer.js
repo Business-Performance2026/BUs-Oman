@@ -85,6 +85,18 @@ qs('typeChips').addEventListener('click', e=>{
   b.classList.add('on'); currentType = b.dataset.t; renderTrips();
 });
 
+/* خارطة جوجل مضمّنة تعرض مسار الرحلة (مجانية — بدون API Key) */
+function mapHTML(t){
+  const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
+  if(stops.length<2) return '';
+  const enc = s2 => encodeURIComponent(s2 + '، عمان');
+  const url = 'https://maps.google.com/maps?saddr='+enc(stops[0])+'&daddr='+stops.slice(1).map(enc).join('+to:')+'&hl=ar&output=embed';
+  return `<div class="track" style="padding:10px">
+    <div class="track-title" style="padding:2px 4px 8px">🗺️ مسار الرحلة على الخارطة</div>
+    <iframe src="${url}" style="width:100%;height:260px;border:0;border-radius:12px" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+  </div>`;
+}
+
 /* تتبع الرحلة: خط زمني عمودي على اليسار يوضح موقع الباص */
 function trackerHTML(t){
   const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
@@ -115,14 +127,13 @@ function openTrip(id){
         <h3 style="font-weight:900;font-size:18px">${esc(t.name)}</h3>
         <p class="route" style="font-size:15px">${esc(t.from)} ← ${esc(t.to)}</p>
         ${t.busNumber?`<p class="muted">🚌 رقم الباص: <b>${esc(t.busNumber)}</b></p>`:''}
-        ${(t.routeGo&&t.routeGo.length)?`<div class="tline"><span class="muted">🛣️ مسار الذهاب</span><b>${t.routeGo.map(esc).join(' ← ')}</b></div>`:''}
-        ${(t.routeBack&&t.routeBack.length)?`<div class="tline"><span class="muted">🛣️ مسار الرجوع</span><b>${t.routeBack.map(esc).join(' ← ')}</b></div>`:''}
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${t.recurring?'رحلة يومية':fmtDate(new Date(t.date+'T00:00'))}</b></div>
         <div class="tline"><span class="muted">🕖 وقت الانطلاق</span><b>${esc(t.time)}</b></div>
         <div class="tline"><span class="muted">💺 المقاعد المتاحة</span><b>${left} مقعد</b></div>
         <div class="tline" style="border:none"><span class="muted">💰 السعر</span><b class="price">${t.price} ر.ع</b></div>
       </div>
     </div>
+    ${mapHTML(t)}
     ${trackerHTML(t)}
     <button class="btn btn-primary" ${left<=0?'disabled':''} onclick="show('s-book')">${left>0?'احجز الآن':'اكتملت المقاعد'}</button>`;
   show('s-trip');

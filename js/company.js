@@ -601,6 +601,8 @@ async function openBookings(){
   db.collection('bookings').where('companyId','==',company.id)
     .onSnapshot(snap=>{
       const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
+        // إلغاء العميل بنفسه يختفي من لوحة الشركة (يبقى محفوظًا ويظهر للعميل في حسابه)
+        .filter(x => !(x.status==='cancelled' && x.cancelledBy==='customer'))
         .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
       window._bkRows = rows;
       // مؤشر التحديث اللحظي (يتجاوز أول تحميل)

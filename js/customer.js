@@ -51,6 +51,13 @@ function loadTrips(){
       const today = new Date().toISOString().slice(0,10);
       trips = snap.docs.map(d=>({id:d.id,...d.data()}))
         .filter(t => t.recurring || t.date >= today)
+        // الرحلة تختفي من الحجز إذا وصلت آخر محطة أو اكتمل عدد الركاب
+        .filter(t => {
+          const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
+          const ended = t.currentStop!=null && t.currentStop>=0 && stops.length>=2 && t.currentStop>=stops.length-1;
+          const full = (t.booked||0) >= (t.seats||0);
+          return !ended && !full;
+        })
         .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
       renderTrips();
       if(window._trFirst) flashUpdate(); window._trFirst = true;

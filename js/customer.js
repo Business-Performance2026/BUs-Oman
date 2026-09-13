@@ -87,6 +87,7 @@ function renderTrips(){
         <div class="route">${esc(t.from)} ← ${esc(t.to)}</div>
         <div class="meta">📅 ${t.recurring?'يوميًا':esc(t.date)} • 🕖 ${esc(t.time)}</div>
         <div class="meta">${t.busNumber?'🚌 '+esc(t.busNumber)+' • ':''}💺 ${left>0 ? 'متبقي '+left+'/'+t.seats : 'مكتملة'}</div>
+        ${tripDuration(t)?`<div class="meta">⏱️ مدة الرحلة: ${tripDuration(t)}</div>`:''}
       </div>
       <div class="price">${t.price} ر.ع</div>
     </div>`;
@@ -180,6 +181,7 @@ function openTrip(id){
         ${t.busNumber?`<p class="muted">🚌 رقم الحافلة: <b>${esc(t.busNumber)}</b></p>`:''}
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${t.recurring?'رحلة يومية':fmtDate(new Date(t.date+'T00:00'))}</b></div>
         <div class="tline"><span class="muted">🕖 وقت الانطلاق</span><b>${esc(t.time)}</b></div>
+        ${tripDuration(t)?`<div class="tline"><span class="muted">⏱️ مدة الرحلة</span><b>${tripDuration(t)}</b></div>`:''}
         <div class="tline"><span class="muted">💺 المقاعد المتاحة</span><b>${left} مقعد</b></div>
         <div class="tline" style="border:none"><span class="muted">💰 السعر</span><b class="price">${t.price} ر.ع</b></div>
       </div>
@@ -388,6 +390,7 @@ function showTicket(b, bookingId, tripId){
         <p class="muted center" style="margin-bottom:10px">${esc(b.from||'')} ${b.from?'←':''} ${esc(b.to||'')}</p>
         <div class="tline"><span class="muted">👤 المسافر</span><b>${esc(b.name)}</b></div>
         <div class="tline"><span class="muted">📅 التاريخ</span><b>${esc(b.date)}</b></div>
+        ${(()=>{ const tr = trips.find(x=>x.id===(tripId||b.tripId)); const d = tr?tripDuration(tr):''; return d?`<div class="tline"><span class="muted">⏱️ مدة الرحلة</span><b>${d}</b></div>`:''; })()}
         <div class="tline"><span class="muted">🕖 الوقت</span><b>${esc(b.time)}</b></div>
         <div class="tline"><span class="muted">💺 المقاعد</span><b>${b.seats}</b></div>
         ${b.boardingStop?`<div class="tline"><span class="muted">🚏 محطة الصعود</span><b>${esc(b.boardingStop)}</b></div>`:''}

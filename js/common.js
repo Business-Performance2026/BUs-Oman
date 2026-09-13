@@ -119,6 +119,24 @@ function fmtDate(d){
   return d.toLocaleDateString('ar', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 }
 
+/* مدة الرحلة: فرق وقت آخر محطة عن أول محطة (من الأوقات التي تحددها الشركة) */
+function tripDuration(t){
+  try{
+    const stops = (t.routeGo&&t.routeGo.length)?t.routeGo:[t.from,t.to].filter(Boolean);
+    const times = t.routeGoTimes||[];
+    const toMin = v=>{ const m=/^(\d{1,2}):(\d{2})/.exec(v||''); return m? (+m[1])*60+(+m[2]) : null; };
+    let first = toMin(times[0]); if(first==null) first = toMin(t.time);
+    const last = toMin(times[stops.length-1]);
+    if(first==null || last==null || stops.length<2) return '';
+    let d = last-first; if(d<0) d+=1440; // رحلة تعبر منتصف الليل
+    if(d<=0) return '';
+    const h=Math.floor(d/60), m=d%60;
+    if(h&&m) return h+' س و '+m+' د';
+    if(h) return h+' ساعة';
+    return m+' دقيقة';
+  }catch(e){ return ''; }
+}
+
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 async function myRole(uid){

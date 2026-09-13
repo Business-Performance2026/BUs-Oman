@@ -288,7 +288,7 @@ function tripRow(x){
       <span class="badge ${x.active?'b-green':'b-red'}" style="flex-shrink:0">${x.active?'متاحة':'موقوفة'}</span>
     </div>
     <div class="meta" style="margin-top:8px">📅 ${x.recurring?'يوميًا':esc(x.date)} • 🕖 ${esc(x.time)}</div>
-    <div class="meta">${x.busNumber?'🚌 '+esc(x.busNumber)+' • ':''}💺 متبقي ${left}/${x.seats}</div>
+    <div class="meta">${x.busNumber?'🚌 '+esc(x.busNumber)+' • ':''}💺 متبقي ${left}/${x.seats}${tripDuration(x)?' • ⏱️ '+tripDuration(x):''}</div>
     ${isEmployee ? '' : `<div class="bk-actions">
       <button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="openEditTrip('${x.id}')">✏️ تعديل</button>
       <button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="toggleTrip('${x.id}',${!x.active})">${x.active?'⏸️ إيقاف':'▶️ تفعيل'}</button>
@@ -646,7 +646,7 @@ async function confirmPay(id){
 
 /* حذف الحجز نهائيًا من القائمة */
 function delBooking(id, tripId, seats, status){
-  confirmBox({ icon:'🗑️', title:'حذف الحجز', msg:'سيُحذف هذا الحجز نهائيًا من السجلات ولا يمكن التراجع.', ok:'حذف نهائي', danger:true },
+  confirmBox({ icon:'📲', title:'تذكير قبل الحذف', msg:'هل أشعرت العميل برسالة واتساب قبل حذف حجزه؟<br><br>سيُحذف هذا الحجز نهائيًا من السجلات ولا يمكن التراجع.', ok:'نعم، أشعرته — حذف نهائي', danger:true },
   async ()=>{
     try{
       await db.collection('bookings').doc(id).delete();

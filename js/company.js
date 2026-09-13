@@ -214,6 +214,23 @@ async function enterDashboard(){
     b.style.display = (isEmployee && !perms[b.dataset.perm]) ? 'none' : '';
   });
 
+  // جرس الإشعارات: حجز جديد أو إلغاء من عميل — عداد أحمر لحظي
+  if(!window._coBellUnsub){
+    window._coBellUnsub = db.collection('bookings').where('companyId','==',company.id)
+      .onSnapshot(snp=>{
+        const seen = +(localStorage.getItem('bellSeen:'+company.id)||0);
+        let n = 0;
+        snp.docs.forEach(d=>{
+          const x = d.data();
+          const created = (x.createdAt?.seconds||0)*1000;
+          const cancelled = (x.cancelledAt?.seconds||0)*1000;
+          if(created > seen || (x.cancelledBy==='customer' && cancelled > seen)) n++;
+        });
+        const el = qs('coBell');
+        if(el){ el.textContent = n; el.style.display = n ? 'flex' : 'none'; }
+      }, e=>console.error(e));
+  }
+
   await purgeExpiredTrips();
 
   const [t,b,e] = await Promise.all([
@@ -279,7 +296,7 @@ function tripRow(x){
       <button class="icon-btn" style="background:#e0f2fe;color:#0369a1" onclick="shareTripCo('${x.id}')">📤 مشاركة</button>
     </div>`}
     <div class="bk-actions" style="margin-top:8px">
-      <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':'الحافلة الآن في: '+esc(tripStops(x)[x.currentStop]||'')}</button>
+      <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':(x.currentStop>=tripStops(x).length-1?'🏁 الرحلة انتهت هنا':'الحافلة الآن في: '+esc(tripStops(x)[x.currentStop]||''))}</button>
     </div>
   </div>`;
 }
@@ -570,6 +587,13 @@ function shareTripCo(id){
 + '-------------------------\n'
 + 'نتشرف بخدمتكم'), '_blank');
 }
+/* فتح الحجوزات + تصفير الجرس */
+function openBell(){
+  localStorage.setItem('bellSeen:'+company.id, String(Date.now()));
+  const el = qs('coBell'); if(el) el.style.display='none';
+  openBookings();
+}
+
 async function openBookings(){
   show('s-bookings');
   qs('bookingsList').innerHTML = '<div class="empty"><span class="spin"></span> جارِ التحميل...</div>';
@@ -579,6 +603,8 @@ async function openBookings(){
       const rows = snap.docs.map(d=>({id:d.id,...d.data()}))
         .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
       window._bkRows = rows;
+      // مؤشر التحديث اللحظي (يتجاوز أول تحميل)
+      if(window._bkFirst) flashUpdate(); window._bkFirst = true;
       qs('bookingsList').innerHTML = rows.length ? rows.map(b=>`
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;gap:12px;align-items:center">
@@ -602,6 +628,7 @@ async function openBookings(){
             ${b.status!=='confirmed' && b.status!=='cancelled' ? `<button class="icon-btn" style="background:var(--teal-l);color:var(--teal)" onclick="confirmPay('${b.id}')">✔️ تأكيد الدفع</button>` : ''}
             ${b.receiptUrl ? `<a class="icon-btn" style="background:#e8ecf8;color:var(--navy2);text-decoration:none;display:flex;align-items:center;justify-content:center" href="${b.receiptUrl}" target="_blank">📎 الوصل</a>` : ''}
             ${b.status!=='cancelled' ? `<button class="icon-btn" style="background:#fdeaea;color:var(--red)" onclick="cancelBooking('${b.id}','${b.tripId}',${b.seats})">✖️ إلغاء</button>` : `<button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="window.open('${waLink(b.whatsapp)}?text=${waCancelMessage(b)}','_blank')">📩 إشعار العميل</button>`}
+            <button class="icon-btn" style="background:#eef2f7;color:#475569" onclick="delBooking('${b.id}','${b.tripId}',${b.seats},'${b.status}')">🗑️ حذف</button>
           </div>
         </div>`).join('') : '<div class="empty">لا توجد حجوزات واردة بعد</div>';
     }, e=>{
@@ -615,12 +642,30 @@ async function confirmPay(id){
   toast('تم تأكيد الدفع ✔'); // القائمة تتحدث لحظيًا تلقائيًا
 }
 
+/* حذف الحجز نهائيًا من القائمة */
+function delBooking(id, tripId, seats, status){
+  confirmBox({ icon:'🗑️', title:'حذف الحجز', msg:'سيُحذف هذا الحجز نهائيًا من السجلات ولا يمكن التراجع.', ok:'حذف نهائي', danger:true },
+  async ()=>{
+    try{
+      await db.collection('bookings').doc(id).delete();
+      // إرجاع المقاعد فقط إذا لم يكن ملغيًا مسبقًا (الملغي أُرجعت مقاعده عند الإلغاء)
+      if(status!=='cancelled' && tripId && tripId!=='undefined' && seats>0){
+        try{
+          await db.collection('trips').doc(tripId).update({
+            booked: firebase.firestore.FieldValue.increment(-seats) });
+        }catch(e2){ console.warn('استرجاع المقاعد:', e2); }
+      }
+      toast('تم حذف الحجز ✔');
+    }catch(e){ console.error(e); toast('تعذر الحذف: ' + (e.code||e.message)); }
+  });
+}
+
 function cancelBooking(id, tripId, seats){
   promptBox({ icon:'✖️', title:'إلغاء الحجز', msg:'اكتب سبب الإلغاء — سيظهر للعميل في صفحة حجوزاته، وستُرجع المقاعد للرحلة فورًا.', placeholder:'مثال: تغيير موعد الرحلة، ظرف طارئ...', ok:'تأكيد الإلغاء', danger:true },
   async (reason)=>{
     try{
       await db.collection('bookings').doc(id).update({
-        status:'cancelled', cancelReason: reason || 'بدون سبب محدد',
+        status:'cancelled', cancelReason: reason || 'بدون سبب محدد', cancelledBy:'company',
         cancelledAt: firebase.firestore.FieldValue.serverTimestamp() });
       // استرجاع المقاعد خطوة مستقلة — لا يفشل الإلغاء لو الرحلة حُذفت
       if(tripId && tripId!=='undefined' && seats>0){

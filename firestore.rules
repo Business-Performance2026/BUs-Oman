@@ -51,8 +51,12 @@ service cloud.firestore {
     match /bookings/{id} {
       allow create: if true;
       allow read: if true;
-      allow update: if isAdmin() || isStaff(resource.data.companyId);
-      allow delete: if true; // العميل يلغي حجزه برمز التذكرة
+      allow update: if isAdmin() || isStaff(resource.data.companyId)
+        // العميل: إلغاء حجزه فقط (تغيير الحالة إلى ملغي)
+        || (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status','cancelReason','cancelledBy','cancelledAt'])
+            && request.resource.data.status == 'cancelled');
+      allow delete: if isAdmin() || isStaff(resource.data.companyId);
     }
 
     match /employees/{id} {

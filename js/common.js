@@ -9,6 +9,22 @@ function toast(msg){
   clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2500);
 }
 
+/* مؤشر التحديث اللحظي — يظهر للجميع عند وصول بيانات جديدة */
+let _updT1, _updT2;
+function flashUpdate(){
+  let el = document.getElementById('updPill');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'updPill'; el.className = 'upd-pill';
+    document.body.appendChild(el);
+  }
+  el.textContent = '🔄 جارِ التحديث...';
+  el.classList.add('show');
+  clearTimeout(_updT1); clearTimeout(_updT2);
+  _updT1 = setTimeout(()=>{ el.textContent = '✔ تم التحديث'; }, 600);
+  _updT2 = setTimeout(()=>{ el.classList.remove('show'); }, 1800);
+}
+
 /* تسجيل Service Worker لتفعيل "إضافة إلى الشاشة الرئيسية" */
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });

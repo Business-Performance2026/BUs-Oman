@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="stylesheet" href="css/style.css?v=20">
 <script src="js/vendor/exceljs.min.js"></script>
 </head>
 <body>
@@ -86,6 +86,7 @@
     <!-- غلاف الشركة: اسم + شعار + خروج -->
     <div class="cover" id="coCover">
       <button class="logout-btn" onclick="logout()">⎋ خروج</button>
+      <button class="logout-btn" style="left:auto;right:14px" onclick="openBell()">🔔<span id="coBell" class="bell-badge" style="display:none">0</span></button>
       <div class="co-id2">
         <div class="co-logo" id="coLogo">🚌</div>
         <div class="co-badge">
@@ -277,8 +278,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=19"></script>
-<script src="js/common.js?v=19"></script>
-<script src="js/company.js?v=19"></script>
+<script src="js/firebase-config.js?v=20"></script>
+<script src="js/common.js?v=20"></script>
+<script src="js/company.js?v=20"></script>
 </body>
 </html>

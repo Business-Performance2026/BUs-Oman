@@ -53,6 +53,7 @@ function loadTrips(){
         .filter(t => t.recurring || t.date >= today)
         .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
       renderTrips();
+      if(window._trFirst) flashUpdate(); window._trFirst = true;
       // رابط مباشر لرحلة محددة (مشاركة واتساب): يفتحها مباشرة
       if(!window._tripOpened && param('trip')){
         window._tripOpened = true;
@@ -145,7 +146,7 @@ function trackerHTML(t){
   if(stops.length<2) return '';
   const cur = (t.currentStop==null)?-1:t.currentStop;
   return `<div class="track">
-    <div class="track-title">🛰️ تتبع الحافلة مباشرة ${cur===-1?'<span class="badge b-gold" style="margin-right:6px">لم تنطلق بعد</span>':''}</div>
+    <div class="track-title">🛰️ تتبع الحافلة مباشرة ${cur===-1?'<span class="badge b-gold" style="margin-right:6px">لم تنطلق بعد</span>':(cur===stops.length-1?'<span class="badge b-red" style="margin-right:6px">🏁 الرحلة انتهت هنا</span>':'')}</div>
     ${stops.map((s2,i)=>{
       const done = cur>i, now = cur===i;
       const st = done?'مرّ من هنا ✓':now?'الحافلة هنا الآن 📍':'قادم';
@@ -390,7 +391,7 @@ function showTicket(b, bookingId, tripId){
     ${(()=>{ const tr = trips.find(x=>x.id===(tripId||b.tripId)); return tr?trackerHTML(tr):''; })()}
     <div class="notice" style="margin-top:14px">يرجى إبراز رقم التذكرة عند الصعود إلى الحافلة</div>
     <div style="height:12px"></div>
-    ${b.status==='cancelled' && b.cancelReason ? `<div class="notice" style="margin-top:14px;background:#fdeaea;color:var(--red)">⛔ أُلغي هذا الحجز من الشركة<br>السبب: ${esc(b.cancelReason)}</div><div style="height:12px"></div>` : ''}
+    ${b.status==='cancelled' ? `<div class="notice" style="margin-top:14px;background:#fdeaea;color:var(--red)">⛔ ${b.cancelledBy==='customer' ? 'أنت قمت بإلغاء هذا الحجز' : 'أُلغي هذا الحجز من الشركة'+(b.cancelReason?'<br>السبب: '+esc(b.cancelReason):'')}</div><div style="height:12px"></div>` : ''}
     ${bookingId && b.status!=='cancelled' ? `<button class="btn btn-danger" onclick="cancelMyBooking('${bookingId}','${tripId}',${b.seats})">إلغاء الحجز</button><div style="height:12px"></div>` : ''}
     <button class="btn btn-ghost" onclick="goHome()">العودة للرحلات</button>`;
   // باركود التذكرة = رابط تحقق مباشر: من يمسحه يرى صلاحية التذكرة وتفاصيلها
@@ -426,7 +427,7 @@ function findBookings(){
             <h3>${esc(b.tripName)}</h3>
             <div class="meta">${esc(b.date)} • ${esc(b.time)} • ${b.seats} مقعد</div>
             <span class="badge ${cls}" style="margin-top:5px">${label}</span>
-            ${b.status==='cancelled' && b.cancelReason ? `<div class="meta" style="color:var(--red)">السبب: ${esc(b.cancelReason)}</div>` : ''}
+            ${b.status==='cancelled' ? (b.cancelledBy==='customer' ? `<div class="meta" style="color:var(--red)">🙋 أنت قمت بإلغاء هذا الحجز</div>` : `<div class="meta" style="color:var(--red)">أُلغي هذا الحجز من الشركة${b.cancelReason?'<br>السبب: '+esc(b.cancelReason):''}</div>`) : ''}
           </div>
         </div>`;
       }).join('') : '<div class="empty">لا توجد حجوزات على هذا الرقم</div>';
@@ -437,7 +438,13 @@ function cancelMyBooking(id, tripId, seats){
   confirmBox({ icon:'⚠️', title:'إلغاء الحجز', msg:'سيتم إلغاء حجزك وتحرير مقعدك فورًا.', ok:'نعم، إلغاء الحجز', danger:true },
   async ()=>{
     try{
-      await db.collection('bookings').doc(id).delete();
+      // إلغاء بتحديث الحالة (لا حذف) ليظهر للعميل أنه ألغى بنفسه ويصل إشعار للشركة
+      await db.collection('bookings').doc(id).update({
+        status:'cancelled',
+        cancelReason:'',
+        cancelledBy:'customer',
+        cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       // استرجاع المقاعد خطوة مستقلة — لا يفشل الإلغاء لو الرحلة حُذفت
       if(tripId && tripId!=='undefined' && seats>0){
         try{

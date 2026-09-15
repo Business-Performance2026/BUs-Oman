@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>رحلاتك — بوابة الشركات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
 <script src="js/vendor/exceljs.min.js"></script>
 </head>
 <body>
@@ -244,7 +244,21 @@
         <label class="tline" style="cursor:pointer"><b>💳 فيزا / بطاقة</b><input type="checkbox" id="pmVisa" style="width:20px;height:20px"></label>
         <label class="tline" style="cursor:pointer;border:none"><b>🏦 تحويل بنكي</b><input type="checkbox" id="pmTransfer" style="width:20px;height:20px"></label>
       </div>
+      <div class="card">
+        <h3 style="font-weight:900;margin-bottom:12px">🔁 حجز الذهاب والعودة</h3>
+        <div class="field"><label>خصم رحلة العودة % <span class="muted" style="font-size:12px">(0 = إيقاف الميزة)</span></label>
+          <input id="sRetDisc" type="number" min="0" max="90" placeholder="مثال: 15" dir="ltr" style="text-align:right"></div>
+        <p class="muted" style="font-size:12px">إذا حددت خصمًا، يظهر للعميل خيار حجز رحلة العودة بسعر مخفّض عند حجز الذهاب</p>
+      </div>
       <button class="btn btn-primary" id="setBtn" onclick="saveSettings()">حفظ الإعدادات</button>
+    </div>
+  </section>
+
+  <!-- التقارير والإحصائيات (المالك فقط) -->
+  <section class="screen" id="s-stats">
+    <div class="appbar"><button class="back" onclick="goBack()">→</button><h1>التقارير والإحصائيات</h1></div>
+    <div class="wrap">
+      <div id="statsBox"><div class="empty"><span class="spin"></span> جارِ التحميل...</div></div>
     </div>
   </section>
 
@@ -268,6 +282,7 @@
       <button class="on" onclick="show('s-dash')"><span class="i">🏠</span>الرئيسية</button>
       <button data-perm="cal" onclick="openCal()"><span class="i">🗓️</span>الجدول</button>
       <button data-perm="bookings" onclick="openBookings()"><span class="i">🎫</span>الحجوزات</button>
+      <button data-owner onclick="openStats()"><span class="i">📊</span>التقارير</button>
       <button data-owner onclick="openEmps()"><span class="i">👥</span>الموظفون</button>
       <button data-owner onclick="openSettings()"><span class="i">👤</span>ملفي</button>
     </nav>
@@ -278,8 +293,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="js/firebase-config.js?v=22"></script>
-<script src="js/common.js?v=22"></script>
-<script src="js/company.js?v=22"></script>
+<script src="js/firebase-config.js?v=23"></script>
+<script src="js/common.js?v=23"></script>
+<script src="js/company.js?v=23"></script>
 </body>
 </html>

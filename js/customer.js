@@ -167,11 +167,27 @@ function trackerHTML(t){
   </div>`;
 }
 
+function fillReturnTrips(t){
+  const wrap = qs('bRetWrap'); if(!wrap) return;
+  const disc = +(company.returnDiscount||0);
+  // رحلات العودة: نفس الشركة، الاتجاه معكوس، متاحة للحجز
+  const rets = trips.filter(x => x.id!==t.id && x.from===t.to && x.to===t.from && seatsLeft(x)>0);
+  if(disc<=0 || !rets.length){ wrap.style.display='none'; return; }
+  qs('bRetDisc').textContent = 'خصم ' + disc + '%';
+  qs('bRet').checked = false; qs('bRetTripWrap').style.display = 'none';
+  qs('bRetTrip').innerHTML = rets.map(x=>{
+    const rp = Math.round(x.price*(1-disc/100)*1000)/1000;
+    return `<option value="${x.id}">${esc(x.name)} — ${x.recurring?'يوميًا':esc(x.date)} 🕖 ${esc(x.time)} — ${rp} ر.ع بدل ${x.price} ر.ع</option>`;
+  }).join('');
+  wrap.style.display = '';
+}
+
 function openTrip(id){
   currentTrip = trips.find(t=>t.id===id);
   saveNavState({ tripId: id });
   const t = currentTrip, left = seatsLeft(t);
   const departed = !fillBoardingStops(t);
+  fillReturnTrips(t);
   qs('tripDetail').innerHTML = `
     <div class="card" style="padding:0;overflow:hidden">
       <div style="height:140px;background:linear-gradient(140deg,var(--teal),var(--navy2));display:flex;align-items:center;justify-content:center;font-size:60px">${icon(t.type)}</div>
@@ -276,8 +292,10 @@ function submitBooking(){
   if(!/^\d{8,15}$/.test(wa.replace(/\D/g,''))){ err.textContent='رقم الواتساب غير صحيح'; err.classList.add('show'); return; }
   const t = currentTrip, left = seatsLeft(t);
   if(seats > left){ err.textContent='عدد المقاعد المطلوب أكبر من المتاح ('+left+')'; err.classList.add('show'); return; }
-  pendingBooking = { name, whatsapp: wa, seats, boardingStop };
-  saveNavState({ tripId: currentTrip.id, pending: { name, whatsapp: wa, seats, boardingStop } });
+  const retOn = qs('bRetWrap') && qs('bRetWrap').style.display!=='none' && qs('bRet').checked;
+  const returnTripId = retOn ? qs('bRetTrip').value : null;
+  pendingBooking = { name, whatsapp: wa, seats, boardingStop, returnTripId };
+  saveNavState({ tripId: currentTrip.id, pending: { name, whatsapp: wa, seats, boardingStop, returnTripId } });
   renderPayment();
 }
 
@@ -285,7 +303,10 @@ function renderPayment(){
   const t = currentTrip;
   // تعرض فقط طرق الدفع التي فعّلتها الشركة من إعداداتها
   const pm = company.paymentMethods || {};
-  const total = t.price * pendingBooking.seats;
+  const disc = +(company.returnDiscount||0);
+  const retT = pendingBooking.returnTripId ? trips.find(x=>x.id===pendingBooking.returnTripId) : null;
+  const retPrice = retT ? Math.round(retT.price*(1-disc/100)*1000)/1000 : 0;
+  const total = Math.round((t.price * pendingBooking.seats + retPrice * pendingBooking.seats)*1000)/1000;
   let opts = '';
   if(pm.cash)     opts += payBtn('cash', '💵', 'كاش', 'ادفع عند الصعود للحافلة');
   if(pm.visa)     opts += payBtn('visa', '💳', 'فيزا / بطاقة', 'ادفع إلكترونيًا الآن');
@@ -296,6 +317,7 @@ function renderPayment(){
     <div class="card center">
       <h3 style="font-weight:900">${esc(t.name)}</h3>
       <p class="muted">${pendingBooking.seats} مقعد × ${t.price} ر.ع</p>
+      ${retT?`<p class="muted" style="color:#16a34a">🔁 العودة: ${esc(retT.name)} — ${pendingBooking.seats} مقعد × ${retPrice} ر.ع (بخصم ${disc}%)</p>`:''}
       <div class="price" style="font-size:26px;margin-top:6px">${total} ر.ع</div>
     </div>
     <h2 class="sec">اختر طريقة الدفع</h2>
@@ -366,10 +388,38 @@ async function finalizeBooking(paymentMethod, status, receiptUrl){
       booked: firebase.firestore.FieldValue.increment(p.seats)
     });
     t.booked = (t.booked||0) + p.seats;
+
+    // حجز رحلة العودة بسعر مخفّض (إن اختارها العميل)
+    let retInfo = null;
+    const retT = p.returnTripId ? trips.find(x=>x.id===p.returnTripId) : null;
+    if(retT){
+      try{
+        const disc = +(company.returnDiscount||0);
+        const rPrice = Math.round(retT.price*(1-disc/100)*1000)/1000;
+        const rCode = 'OM-' + Math.floor(1000+Math.random()*9000);
+        await db.collection('bookings').add({
+          tripId: retT.id, companyId: company.id, tripName: retT.name,
+          from: retT.from, to: retT.to,
+          name: p.name, whatsapp: p.whatsapp, seats: p.seats, boardingStop: '',
+          date: retT.recurring ? 'يوميًا' : retT.date, time: retT.time, price: rPrice,
+          paymentMethod, paymentStatus: status==='confirmed'?'confirmed':'pending',
+          receiptUrl: receiptUrl || null, isReturn: true, returnOf: code,
+          code: rCode, status, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await db.collection('trips').doc(retT.id).update({
+          booked: firebase.firestore.FieldValue.increment(p.seats)
+        });
+        retT.booked = (retT.booked||0) + p.seats;
+        retInfo = { name: retT.name, code: rCode };
+      }catch(e3){ console.error('حجز العودة:', e3); toast('تم حجز الذهاب — تعذر حجز العودة، تواصل مع الشركة'); }
+    }
+
     renderTrips();
     showTicket({ tripName:t.name, from:t.from, to:t.to, name:p.name, seats:p.seats,
       date: t.recurring?'يوميًا':t.date, time:t.time, code, boardingStop: p.boardingStop||'',
       status });
+    if(retInfo) setTimeout(()=> infoBox({ icon:'🔁', title:'تم حجز رحلة العودة',
+      msg: 'رحلة العودة: <b>'+esc(retInfo.name)+'</b><br>رقم التذكرة: <b dir="ltr">'+esc(retInfo.code)+'</b><br>تجدها في صفحة «حجوزاتي».', ok:'ممتاز' }), 800);
   }catch(e){ console.error(e); toast('حدث خطأ، حاول مجددًا'); }
 }
 

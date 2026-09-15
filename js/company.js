@@ -21,7 +21,7 @@ const AUTH_SCREENS = ['s-loading','s-login','s-register','s-forgot','s-pending']
 // تُقرأ عند تحميل الصفحة قبل أن يغيّرها الدخول التلقائي
 const SAVED_SCREEN = sessionStorage.getItem('coScreen');
 const SAVED_DRAFT = sessionStorage.getItem('coDraft');
-const NAVMAP = {'s-dash':0,'s-cal':1,'s-bookings':2,'s-emps':3,'s-settings':4};
+const NAVMAP = {'s-dash':0,'s-cal':1,'s-bookings':2,'s-emps':4,'s-settings':5,'s-stats':3};
 function _syncNav(id){
   const nav = qs('dashNav'); if(!nav) return;
   nav.style.display = AUTH_SCREENS.includes(id) ? 'none' : 'flex';
@@ -63,7 +63,7 @@ function restoreSession(){
   if(isEmployee && (saved==='s-emps' || saved==='s-settings')) return;
   const needPerm = { 's-cal':'cal', 's-bookings':'bookings', 's-qr':'qr' };
   if(isEmployee && needPerm[saved] && !perms[needPerm[saved]]) return;
-  const openers = { 's-cal':openCal, 's-bookings':openBookings, 's-emps':openEmps, 's-settings':openSettings, 's-qr':openQR };
+  const openers = { 's-cal':openCal, 's-bookings':openBookings, 's-emps':openEmps, 's-settings':openSettings, 's-qr':openQR, 's-stats':openStats };
   if(openers[saved]){ openers[saved](); _restoreCoDraft(saved); return; }
   if(saved==='s-addtrip'){
     show('s-addtrip');
@@ -218,6 +218,7 @@ async function enterDashboard(){
   if(!window._coBellUnsub){
     window._coBellUnsub = db.collection('bookings').where('companyId','==',company.id)
       .onSnapshot(snp=>{
+        window._allBookings = snp.docs.map(d=>({id:d.id,...d.data()}));
         const seen = +(localStorage.getItem('bellSeen:'+company.id)||0);
         let n = 0;
         snp.docs.forEach(d=>{
@@ -296,6 +297,7 @@ function tripRow(x){
       <button class="icon-btn" style="background:#e0f2fe;color:#0369a1" onclick="shareTripCo('${x.id}')">📤 مشاركة</button>
     </div>`}
     <div class="bk-actions" style="margin-top:8px">
+      <button class="icon-btn" style="background:#f7ecd4;color:#8a6d1a" onclick="remindPassengers('${x.id}')" title="تذكير الركاب">📨</button>
       <button class="icon-btn" style="background:#e0f2fe;color:#0369a1;flex:1" onclick="openTracker('${x.id}')">📍 ${x.currentStop==null||x.currentStop<0?'لم تنطلق — حدّد الموقع':(x.currentStop>=tripStops(x).length-1?'🏁 الرحلة انتهت هنا':'الحافلة الآن في: '+esc(tripStops(x)[x.currentStop]||''))}</button>
     </div>
   </div>`;
@@ -794,6 +796,7 @@ function openSettings(){
   qs('sBankName').value = company.bankName || '';
   qs('sCall').value = company.contactCall || '';
   qs('sInsta').value = company.instagram || '';
+  qs('sRetDisc').value = company.returnDiscount || '';
   const pm = company.paymentMethods || {};
   qs('pmCash').checked = !!pm.cash;
   qs('pmVisa').checked = !!pm.visa;
@@ -825,6 +828,7 @@ async function saveSettings(){
       bankName: qs('sBankName').value.trim(),
       contactCall: qs('sCall').value.trim(),
       instagram: qs('sInsta').value.trim(),
+      returnDiscount: Math.min(90, Math.max(0, +qs('sRetDisc').value || 0)),
       paymentMethods: {
         cash: qs('pmCash').checked,
         visa: qs('pmVisa').checked,
@@ -861,4 +865,112 @@ function openQR(){
 function copyLink(){
   navigator.clipboard.writeText(myLink)
     .then(()=>toast('تم نسخ الرابط')).catch(()=>toast('انسخ الرابط يدويًا'));
+}
+
+/* ===== التقارير والإحصائيات (المالك فقط) ===== */
+async function openStats(){
+  show('s-stats');
+  const box = qs('statsBox');
+  box.innerHTML = '<div class="empty"><span class="spin"></span> جارِ التحميل...</div>';
+  try{
+    if(!window._allBookings){
+      const snp = await db.collection('bookings').where('companyId','==',company.id).get();
+      window._allBookings = snp.docs.map(d=>({id:d.id,...d.data()}));
+    }
+    const tripsSnp = await db.collection('trips').where('companyId','==',company.id).get();
+    const tripsAll = tripsSnp.docs.map(d=>({id:d.id,...d.data()}));
+
+    const valid = window._allBookings.filter(b=>b.status!=='cancelled');
+    const nowKey = new Date().toISOString().slice(0,7); // الشهر الحالي
+    const month = valid.filter(b=>((b.createdAt?.seconds? new Date(b.createdAt.seconds*1000).toISOString().slice(0,7):'')===nowKey));
+    const rev = arr => Math.round(arr.reduce((a,b)=> a + (b.price||0)*(b.seats||0), 0)*1000)/1000;
+
+    // إحصاءات كل رحلة
+    const perTrip = {};
+    valid.forEach(b=>{
+      const k = b.tripId || b.tripName;
+      if(!perTrip[k]) perTrip[k] = { name:b.tripName||'رحلة', count:0, seats:0, rev:0 };
+      perTrip[k].count++; perTrip[k].seats += (b.seats||0); perTrip[k].rev += (b.price||0)*(b.seats||0);
+    });
+    const rows = Object.entries(perTrip).map(([k,v])=>{
+      const tr = tripsAll.find(t=>t.id===k);
+      const occ = tr && tr.seats ? Math.min(100, Math.round((tr.booked||0)/tr.seats*100)) : null;
+      return { ...v, occ };
+    }).sort((a,b)=> b.rev - a.rev);
+    const best = rows[0];
+    const avgOcc = (()=>{ const o = rows.filter(r=>r.occ!==null); return o.length? Math.round(o.reduce((a,r)=>a+r.occ,0)/o.length) : 0; })();
+
+    const statCard = (ic,label,val,color)=>`
+      <div class="card center" style="padding:14px 8px">
+        <div style="font-size:24px">${ic}</div>
+        <div style="font-size:19px;font-weight:900;color:${color};margin-top:4px">${val}</div>
+        <div class="muted" style="font-size:12px">${label}</div>
+      </div>`;
+
+    box.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        ${statCard('🎫','إجمالي الحجوزات', valid.length, 'var(--teal)')}
+        ${statCard('💰','إجمالي الإيرادات', rev(valid)+' ر.ع', '#16a34a')}
+        ${statCard('📅','حجوزات هذا الشهر', month.length, '#0369a1')}
+        ${statCard('📈','إيرادات هذا الشهر', rev(month)+' ر.ع', '#8a6d1a')}
+      </div>
+      ${best ? `<div class="notice" style="margin-bottom:12px">🏆 أكثر رحلة تحقيقًا للإيرادات: <b>${esc(best.name)}</b> (${Math.round(best.rev*1000)/1000} ر.ع)</div>` : ''}
+      <div class="card" style="margin-bottom:12px">
+        <div class="tline"><span class="muted">💺 متوسط إشغال المقاعد</span><b>${avgOcc}%</b></div>
+        <div class="tline"><span class="muted">🚌 عدد الرحلات المسجلة</span><b>${tripsAll.length}</b></div>
+        <div class="tline" style="border:none"><span class="muted">⛔ الحجوزات الملغية</span><b>${window._allBookings.length - valid.length}</b></div>
+      </div>
+      <h2 class="sec">أداء الرحلات</h2>
+      ${rows.length ? rows.map(r=>`
+        <div class="card" style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <h4 style="font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</h4>
+            <b style="color:#16a34a;flex-shrink:0">${Math.round(r.rev*1000)/1000} ر.ع</b>
+          </div>
+          <div class="meta" style="margin-top:6px">🎫 ${r.count} حجز • 💺 ${r.seats} مقعد</div>
+          ${r.occ!==null ? `<div style="background:#eef2f7;border-radius:8px;height:8px;margin-top:8px;overflow:hidden">
+            <div style="height:100%;width:${r.occ}%;background:linear-gradient(90deg,var(--teal),#16a34a);border-radius:8px"></div>
+          </div>
+          <div class="meta" style="margin-top:4px">نسبة الإشغال: ${r.occ}%</div>` : ''}
+        </div>`).join('') : '<div class="empty">لا توجد حجوزات بعد</div>'}`;
+  }catch(e){ console.error(e); box.innerHTML = '<div class="empty">تعذر تحميل التقارير — حاول مجددًا</div>'; }
+}
+
+/* ===== تذكير ركاب الرحلة عبر واتساب ===== */
+async function remindPassengers(tripId){
+  try{
+    const snp = await db.collection('bookings').where('tripId','==',tripId).get();
+    const list = snp.docs.map(d=>d.data()).filter(b=>b.status!=='cancelled');
+    const tr = myTrips.find(t=>t.id===tripId) || {};
+    if(!list.length){ infoBox({ icon:'📨', title:'لا يوجد ركاب', msg:'لا توجد حجوزات مؤكدة على هذه الرحلة بعد.', ok:'حسنًا' }); return; }
+    closeModal();
+    const m = document.createElement('div');
+    m.className = 'mback';
+    const msgFor = b => encodeURIComponent(
+      'تذكير برحلتك القادمة — ' + company.name + '\n' +
+      '-------------------------\n' +
+      'الرحلة: ' + (tr.name||b.tripName||'') + '\n' +
+      'التاريخ: ' + (b.date||'') + '\n' +
+      'وقت الانطلاق: ' + (b.time||tr.time||'') + '\n' +
+      (b.boardingStop ? 'محطة الصعود: ' + b.boardingStop + '\n' : '') +
+      'رقم التذكرة: ' + (b.code||'') + '\n' +
+      'عدد المقاعد: ' + (b.seats||1) + '\n' +
+      '-------------------------\n' +
+      'يرجى الحضور قبل وقت الانطلاق. نتمنى لك رحلة سعيدة'
+    );
+    m.innerHTML = `<div class="modal" style="max-height:80vh;overflow-y:auto">
+      <div class="m-ic">📨</div>
+      <h3>تذكير ركاب الرحلة</h3>
+      <p class="muted" style="font-size:13px">اضغط على زر كل راكب لإرسال التذكير عبر واتساب</p>
+      ${list.map(b=>`
+        <div class="tline" style="border-bottom:1px solid #eef2f7">
+          <span><b>${esc(b.name)}</b> <span class="muted">(${b.seats} مقعد • ${esc(b.code||'')})</span></span>
+          <a class="icon-btn" style="background:#dcf8e7;color:#128c4b;text-decoration:none" target="_blank" rel="noopener"
+             href="https://wa.me/${String(b.whatsapp||'').replace(/\D/g,'')}?text=${msgFor(b)}">📲 إرسال</a>
+        </div>`).join('')}
+      <div style="height:12px"></div>
+      <button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>
+    </div>`;
+    document.body.appendChild(m);
+  }catch(e){ console.error(e); toast('تعذر تحميل الركاب'); }
 }
